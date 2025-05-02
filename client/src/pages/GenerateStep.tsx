@@ -91,7 +91,19 @@ export default function GenerateStep() {
               const result = JSON.parse(xhr.responseText);
               console.log("Content generation succeeded:", result);
               
+              // Verify what was returned from the server
+              if (!result.generatedContent || result.generatedContent.length === 0) {
+                console.error("No generated content returned from server");
+                toast({
+                  title: "Generation issue",
+                  description: "No content was returned from the server. Please try again.",
+                  variant: "destructive"
+                });
+                return;
+              }
+              
               // Store both the generated content and the original template sections
+              console.log("Setting generated content:", result.generatedContent);
               setGeneratedContent(result.generatedContent || []);
               setTemplateSections(result.templateSections || template.sections || []);
               

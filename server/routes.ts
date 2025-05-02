@@ -260,6 +260,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post("/api/projects/:id/generate", async (req, res) => {
     try {
+      // Check for OpenAI API key
+      if (!process.env.OPENAI_API_KEY) {
+        console.error("Missing OpenAI API key for content generation");
+        return res.status(500).json({ 
+          message: "OpenAI API key is not configured. Content generation is not available." 
+        });
+      }
+      
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ message: "Invalid project ID" });
@@ -281,30 +289,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Company not found" });
       }
       
+      // Validate template has sections
+      if (!template.sections || template.sections.length === 0) {
+        console.error("Template has no sections", template);
+        return res.status(400).json({ message: "Template has no content sections to generate" });
+      }
+      
+      console.log("Starting content generation for project:", id);
+      console.log("Template sections count:", template.sections.length);
+      
       // Generate content for each template section
       const generatedContent: GeneratedContent[] = [];
       
       // Generate content for each section in the template
-      for (const section of template.sections) {
-        // Log the full section structure for debugging
-        console.log(`Generating content for section: ${section.title}, format: ${section.format}, needs content: ${section.needsContent}`);
+      for (let index = 0; index < template.sections.length; index++) {
+        const section = template.sections[index];
         
-        // Only generate content if the slide needs it
-        const content = await generateContent({
-          section,
-          company,
-          strategy: project.strategy || ""
-        });
-        
-        // Include all the necessary information in the generated content
-        generatedContent.push({
-          slideNumber: section.slideNumber,
-          slideTitle: section.title,
-          content,
-          format: section.format,
-          needsContent: section.needsContent
+        try {
+          // Check for required section properties
+          if (!section.title) {
+            console.warn(`Section missing title, skipping: ${JSON.stringify(section)}`);
+            continue;
+          }
+          
+          // Use index+1 as fallback for slideNumber
+          const slideNumber = section.slideNumber || index + 1;
+          
+          // Log the full section structure for debugging
+          console.log(`Generating content for section: ${section.title}, format: ${section.format || 'unknown'}, slide #: ${slideNumber}`);
+          
+          // Only generate content if the slide needs it
+          const content = await generateContent({
+            section,
+            company,
+            strategy: project.strategy || ""
+          });
+          
+          // Include all the necessary information in the generated content
+          generatedContent.push({
+            slideNumber: slideNumber,
+            slideTitle: section.title,
+            content,
+            format: section.format || "Text",
+            needsContent: section.needsContent || true
+          });
+          
+          console.log(`Generated content for section ${section.title}`);
+        } catch (sectionError) {
+          console.error(`Error generating content for section ${section.title || index}:`, sectionError);
+          // Continue with other sections
+        }
+      }
+      
+      // Validate we have content
+      if (generatedContent.length === 0) {
+        return res.status(500).json({ 
+          message: "Failed to generate any content for the template sections" 
         });
       }
+      
+      console.log(`Successfully generated content for ${generatedContent.length} sections`);
       
       // Update project with generated content
       const updatedProject = await storage.updateProjectContent(id, generatedContent);
@@ -312,6 +356,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Return both the updated project and the original template sections for reference
       res.json({
         ...updatedProject,
+        generatedContent: generatedContent,  // Ensure this is explicitly returned 
         templateSections: template.sections
       });
     } catch (error: any) {
