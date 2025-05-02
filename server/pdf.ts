@@ -2,7 +2,14 @@ import { TemplateSection } from '@shared/schema';
 import OpenAI from 'openai';
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "sk-" });
+// Ensure we have a valid API key
+if (!process.env.OPENAI_API_KEY) {
+  console.error("ERROR: OPENAI_API_KEY environment variable is not set for PDF analysis!");
+}
+
+const openai = new OpenAI({ 
+  apiKey: process.env.OPENAI_API_KEY
+});
 
 type TemplateAnalysisResult = {
   numPages: number;
@@ -80,29 +87,54 @@ async function analyzeSlides(rawText: string, pages: string[]): Promise<Template
     
     // First, send the raw text to OpenAI to identify slide titles and structure
     const prompt = `
-You are an expert presentation analyzer. I have a presentation template in PDF format that has been converted to text. 
-Your task is to identify the individual slides in this presentation and analyze each one.
+You are an expert presentation analyzer. I have a marketing presentation template in PDF format that has been converted to text. 
+Your task is to identify and analyze EVERY INDIVIDUAL SLIDE in this presentation. This is critical for accurate content generation later.
 
-Here's the extracted text from the PDF (it may be messy due to PDF conversion):
+Here's the extracted text from the PDF (it may be incomplete or messy due to PDF conversion):
 \`\`\`
-${rawText.substring(0, 15000)} // Limit to avoid token limits
+${rawText.substring(0, 15000)} // Limited sample to avoid token limits
 \`\`\`
 
-Please identify each slide and provide the following information for each:
-1. Slide number
-2. Slide title (if present)
-3. Format of content needed (e.g., Paragraph, Bullet Points, Numbered List, Table, etc.)
-4. Detailed format requirements (e.g., "2 labeled paragraphs with specific sections")
-5. Expected length (Short: 30-50 words, Medium: 50-100 words, Long: 100-200 words)
-6. Purpose of the slide in the presentation
-7. Whether the slide needs custom content (some slides like title slides or agenda slides don't need custom content)
-8. Any text limits or constraints
-9. Original text content from the slide (summarized if lengthy)
+IMPORTANT: A marketing presentation typically has 15-40 slides. Your goal is to identify as many slides as possible, not just section headers.
 
-Format your response as a JSON array of objects, one for each slide, with these keys:
-slideNumber, title, format, formatDetails, expectedLength, purpose, needsContent, textLimits, originalText
+Look for patterns indicating slide transitions such as:
+- Numbered segments (Slide 1, Slide 2)
+- Heading formats that repeat throughout the document
+- Navigation markers or footer text that changes between slides
+- Content transitions that indicate new slides
+- Slide titles/headers that appear to be in a consistent format
+- Page numbers or slide numbers if present
 
-Focus on identifying actual presentation slides, not PDF metadata or other artifacts.
+For each INDIVIDUAL SLIDE you identify, provide:
+
+1. Slide number: Numeric order in the presentation (1, 2, 3, etc.)
+2. Slide title: The main heading or title of this specific slide
+3. Format: The primary content format needed (Paragraph, Bullet Points, Numbered List, Table, Chart, Image with Caption, etc.)
+4. Format details: Specific formatting requirements (e.g., "3 bullet points with supporting text", "2 columns comparing pros/cons", "percentages to fill in")
+5. Expected length: Word count range (Short: 30-50 words, Medium: 50-100 words, Long: 100-200 words)
+6. Purpose: What this specific slide aims to communicate within the presentation
+7. Needs custom content: Boolean (true/false) indicating if this slide needs generated content (only title slides, TOCs, or purely decorative slides should be false)
+8. Original text: Extract any important text from the slide that shows its purpose/structure (abbreviated if lengthy)
+
+Your output must be a valid JSON object with a single key "slides" containing an array of slide objects:
+
+{
+  "slides": [
+    {
+      "slideNumber": 1,
+      "title": "Title of first slide",
+      "format": "Format needed",
+      "formatDetails": "Detailed format requirements",
+      "expectedLength": "Length estimation",
+      "purpose": "Purpose of this slide",
+      "needsContent": true/false,
+      "originalText": "Sample text from slide"
+    },
+    // ... additional slides
+  ]
+}
+
+BE COMPREHENSIVE - Identify and analyze as many individual slides as possible. This is crucial for the presentation's content generation.
 `;
 
     // Generate analysis using OpenAI
@@ -182,23 +214,32 @@ function splitIntoPages(text: string): string[] {
 function identifySections(pages: string[]): TemplateSection[] {
   const sections: TemplateSection[] = [];
   
-  // Common section titles in marketing templates
-  const sectionTitles = [
-    "Executive Summary",
-    "Company Overview",
-    "Market Analysis",
-    "Competitive Analysis",
-    "Target Audience",
-    "Value Proposition",
-    "Marketing Strategy",
-    "Marketing Goals",
-    "Marketing Channels",
-    "Content Strategy",
-    "Social Media Strategy",
-    "Budget",
-    "Timeline",
-    "KPIs",
-    "Conclusion"
+  // Common marketing presentation slide titles
+  const slidePatterns = [
+    // Title and intro slides
+    "Title Slide", "Introduction", "Agenda", "Table of Contents", "Overview",
+    
+    // Common marketing slide types
+    "Objectives", "Goals", "Strategy", "Positioning", "Value Proposition", 
+    "Target Audience", "Buyer Persona", "Customer Profile", "Market Analysis",
+    "Competitive Landscape", "Competitor Analysis", "SWOT Analysis",
+    
+    // Campaign-specific slides
+    "Campaign Overview", "Campaign Structure", "Campaign Timeline", "Campaign Budget",
+    "Content Strategy", "Content Calendar", "Creative Brief", "Creative Examples",
+    "Ad Formats", "Ad Examples", "Ad Specifications", "Ad Copy Examples",
+    
+    // Channel-specific slides
+    "Channel Strategy", "Channel Mix", "Media Mix", "Media Plan", "Media Schedule",
+    "Paid Search", "Paid Social", "Display Advertising", "Video Advertising",
+    "Social Media", "Email Marketing", "Content Marketing", "SEO Strategy",
+    
+    // Budget and performance slides
+    "Budget Allocation", "Budget Breakdown", "Performance Metrics", "KPIs",
+    "Reporting Dashboard", "Analytics Setup", "Measurement Plan", "Success Metrics",
+    
+    // Closing slides
+    "Timeline", "Next Steps", "Action Items", "Q&A", "Appendix", "Thank You", "Conclusion"
   ];
   
   // Section purpose mapping (helps provide context for the AI)
@@ -228,38 +269,82 @@ function identifySections(pages: string[]): TemplateSection[] {
   // Simple regex for labeled paragraphs that doesn't use lookbehind/lookahead which are ES2018 features
   const labeledParagraphsPattern = /([A-Z][A-Za-z\s]+):([\s\S]*?)(?:\n[A-Z]|$)/g;
   
-  // Process each page
+  // Process each page, assuming it's likely an individual slide
   pages.forEach((pageContent, pageIndex) => {
-    // Look for section headers
-    let foundSections = [];
+    // Look for slide titles and headers
+    let foundSlides = [];
     
-    for (const title of sectionTitles) {
-      const regex = new RegExp(`\\b${title}\\b`, 'i');
+    // Method 1: Check for known slide patterns
+    for (const pattern of slidePatterns) {
+      const regex = new RegExp(`\\b${pattern}\\b`, 'i');
       if (regex.test(pageContent)) {
-        foundSections.push(title);
+        foundSlides.push(pattern);
       }
     }
     
-    // If no predefined sections were found, try to identify headers
-    if (foundSections.length === 0) {
+    // Method 2: Try to find slide numbers
+    const slideNumberRegex = /slide\s*(\d+)|(\d+)\s*[\.\)]/gi;
+    let slideMatch;
+    while ((slideMatch = slideNumberRegex.exec(pageContent)) !== null) {
+      const slideNumber = slideMatch[1] || slideMatch[2];
+      const slideContext = pageContent.substring(
+        Math.max(0, slideMatch.index - 50), 
+        Math.min(pageContent.length, slideMatch.index + 50)
+      );
+      
+      // Try to extract a title from the text around the slide number
+      const titleRegex = /([A-Z][A-Za-z\s\-]{3,30})(?:\r?\n|\:|$)/g;
+      let titleMatch;
+      let slideTitle = null;
+      
+      while ((titleMatch = titleRegex.exec(slideContext)) !== null) {
+        slideTitle = titleMatch[1].trim();
+        break; // Just get the first match
+      }
+      
+      if (slideTitle) {
+        foundSlides.push(slideTitle);
+      } else {
+        foundSlides.push(`Slide ${slideNumber}`);
+      }
+    }
+    
+    // Method 3: If still no slides found, look for any potential headers
+    if (foundSlides.length === 0) {
       // Look for potential headers (capitalized text followed by content)
-      const headerRegex = /([A-Z][A-Z\s]{3,30})(?:\r?\n|\:|$)/g;
+      const headerRegex = /([A-Z][A-Za-z\s\-:]{3,40})(?:\r?\n|\:|$)/g;
       let match;
       
       while ((match = headerRegex.exec(pageContent)) !== null) {
-        foundSections.push(match[1].trim());
+        const title = match[1].trim();
+        // Filter out common non-title texts that might be in all caps
+        if (!title.match(/^(NOTE|WARNING|IMPORTANT|COPYRIGHT|CONFIDENTIAL|APPENDIX|EXAMPLE)/i)) {
+          foundSlides.push(title);
+        }
       }
     }
     
-    // For each found section, determine its format and expected length
-    foundSections.forEach((title, index) => {
-      // Find where the section starts in the page content
+    // If still no slides found, treat the page as its own slide
+    if (foundSlides.length === 0) {
+      // Get the first line or first few words as a potential title
+      const firstLine = pageContent.split('\n')[0].trim();
+      if (firstLine && firstLine.length < 100) {
+        foundSlides.push(firstLine);
+      } else {
+        // No good title found, create a generic one
+        foundSlides.push(`Slide ${pageIndex + 1}`);
+      }
+    }
+    
+    // For each found slide, determine its format and expected length
+    foundSlides.forEach((title: string, index: number) => {
+      // Find where the slide starts in the page content
       const startIndex = pageContent.indexOf(title);
       if (startIndex === -1) return;
       
-      // Extract the content following the title (until next section or end of page)
+      // Extract the content following the title (until next slide or end of page)
       let endIndex = pageContent.length;
-      for (const nextTitle of foundSections) {
+      for (const nextTitle of foundSlides) {
         if (nextTitle !== title) {
           const nextTitleIndex = pageContent.indexOf(nextTitle, startIndex + title.length);
           if (nextTitleIndex !== -1 && nextTitleIndex < endIndex) {
