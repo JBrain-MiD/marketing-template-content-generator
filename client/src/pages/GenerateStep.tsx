@@ -152,11 +152,26 @@ export default function GenerateStep() {
     }
   };
   
-  const copyContentToClipboard = (content: string) => {
+  const copyContentToClipboard = (content: string, title?: string) => {
     navigator.clipboard.writeText(content).then(() => {
       toast({
         title: "Copied to clipboard",
-        description: "Content has been copied to clipboard"
+        description: title 
+          ? `"${title}" content has been copied to clipboard`
+          : "Content has been copied to clipboard"
+      });
+    });
+  };
+  
+  const copyAllContent = () => {
+    const allContent = generatedContent.map(section => {
+      return `## ${section.sectionTitle}\n\n${section.content}\n\n`;
+    }).join('---\n\n');
+    
+    navigator.clipboard.writeText(allContent).then(() => {
+      toast({
+        title: "All content copied",
+        description: "All sections have been copied to clipboard with section headings"
       });
     });
   };
@@ -237,36 +252,60 @@ export default function GenerateStep() {
         ) : (
           <Card className="mb-8">
             <CardContent className="p-6">
-              <h3 className="font-medium text-lg mb-4 text-gray-800">Generated Content</h3>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="font-medium text-lg text-gray-800">Generated Content</h3>
+                
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={copyAllContent}
+                  className="flex items-center gap-1.5 bg-primary/5 hover:bg-primary/10"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                  </svg>
+                  Copy All Sections
+                </Button>
+              </div>
               
-              <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="mb-4 flex flex-wrap">
-                  {generatedContent.map((section) => (
-                    <TabsTrigger key={section.sectionId} value={section.sectionId} className="mr-2 mb-2">
-                      {section.sectionTitle}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <div className="border-b border-gray-200 mb-6">
+                  <h4 className="text-sm font-medium text-gray-500 mb-2">Template Sections:</h4>
+                  <TabsList className="mb-4 h-auto flex-wrap gap-1 bg-transparent p-0">
+                    {generatedContent.map((section, index) => (
+                      <TabsTrigger 
+                        key={section.sectionId} 
+                        value={section.sectionId} 
+                        className="px-4 py-2 rounded-full data-[state=active]:bg-primary data-[state=active]:text-white shadow-none mr-2 mb-2 text-sm"
+                      >
+                        <span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center mr-2 text-xs">
+                          {index + 1}
+                        </span>
+                        {section.sectionTitle}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </div>
                 
                 {generatedContent.map((section) => (
                   <TabsContent key={section.sectionId} value={section.sectionId}>
-                    <div className="p-4 border border-gray-200 rounded-md bg-white">
-                      <div className="flex justify-between items-center mb-3">
-                        <h4 className="text-md font-medium text-gray-800">{section.sectionTitle}</h4>
+                    <div className="p-6 border border-gray-200 rounded-md bg-white shadow-sm">
+                      <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-100">
+                        <h4 className="text-lg font-medium text-gray-800">{section.sectionTitle}</h4>
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => copyContentToClipboard(section.content)}
-                          className="flex items-center text-xs"
+                          onClick={() => copyContentToClipboard(section.content, section.sectionTitle)}
+                          className="flex items-center gap-1.5 font-medium hover:bg-primary/5"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                           </svg>
-                          Copy
+                          Copy Content
                         </Button>
                       </div>
                       
-                      <div className="whitespace-pre-wrap text-gray-700 text-sm leading-relaxed">
+                      <div className="whitespace-pre-wrap text-gray-700 text-base leading-relaxed bg-gray-50 p-5 rounded-md font-normal max-h-[400px] overflow-y-auto">
                         {section.content}
                       </div>
                     </div>
