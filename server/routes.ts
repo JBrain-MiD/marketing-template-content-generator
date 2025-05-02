@@ -348,12 +348,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
           
           // Include all the necessary information in the generated content
+          // Make sure to respect the actual needsContent flag from the section
+          // Use === false to ensure only explicitly false values are treated as not needing content
+          const slideNeedsContent = section.needsContent === false ? false : true;
+          
           generatedContent.push({
             slideNumber: slideNumber,
             slideTitle: section.title,
             content,
             format: section.format || "Text",
-            needsContent: section.needsContent || true
+            needsContent: slideNeedsContent
           });
           
           console.log(`Generated content for section ${section.title}`);
