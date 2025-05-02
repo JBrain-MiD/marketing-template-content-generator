@@ -59,6 +59,9 @@ export async function analyzeTemplate(buffer: Buffer): Promise<TemplateAnalysisR
     
     console.log(`Extracted approximately ${rawText.length} characters of text.`);
     
+    // Debug: Log a sample of the extracted text (put more in the logs for analysis)
+    console.log(`TEXT SAMPLE ===>\n${rawText.substring(0, 3000)}\n<===END TEXT SAMPLE`);
+    
     // Split text into logical pages/slides
     const pages = splitIntoPages(rawText);
     
