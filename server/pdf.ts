@@ -1,6 +1,5 @@
 import { TemplateSection } from '@shared/schema';
-// We're not using pdf-parse directly anymore
-// Instead, we've implemented our own PDF analysis logic
+// We'll handle PDF parsing more safely without relying on problematic dependencies
 
 type TemplateAnalysisResult = {
   numPages: number;
@@ -8,67 +7,57 @@ type TemplateAnalysisResult = {
   rawText: string;
 };
 
-// More robust implementation that doesn't rely on pdf-parse
+// A more robust implementation that doesn't rely on external PDF parsing libraries
 export async function analyzeTemplate(buffer: Buffer): Promise<TemplateAnalysisResult> {
   try {
-    // Instead of relying on pdf-parse which is causing issues,
-    // we'll simulate the PDF content analysis with a robust approach
+    console.log("Starting to analyze PDF template...");
     
-    // Create a default implementation that works regardless of the PDF content
-    // This will help us avoid the dependency issues with pdf-parse
+    // Since pdf-parse is causing issues, we'll use a robust fallback approach
+    // that works with the buffer data directly to extract approximate content
     
-    // For a production app, we'd integrate with a more reliable PDF parsing library
+    // For safety, we'll determine page count from buffer size
+    // This isn't exact but helps provide structure to our analysis
+    const estimatedPageCount = Math.max(1, Math.floor(buffer.length / 40000)); 
+    console.log(`Estimated ${estimatedPageCount} pages from buffer size.`);
     
-    // Calculate a fake page count based on buffer size
-    // (This is just a simulation - real implementation would parse the actual PDF)
-    const estimatedPageCount = Math.max(1, Math.floor(buffer.length / 50000));
+    // Convert buffer to string for basic text extraction
+    // Look for standard PDF markers and text blocks
+    const bufferStr = buffer.toString('utf-8', 0, Math.min(buffer.length, 1000000));
     
-    // Create sample content that matches marketing templates
-    const sampleText = `
-MARKETING STRATEGY TEMPLATE
-
-Executive Summary
-This section provides a high-level overview of the marketing strategy.
-
-Company Overview
-Background information about the company, its products/services, and its position in the market.
-
-Market Analysis
-Analysis of the target market, including size, growth potential, and trends.
-
-Competitive Analysis
-Overview of key competitors, their strengths, weaknesses, and market position.
-
-Target Audience
-Detailed description of the target audience, including demographics, behaviors, and needs.
-
-Marketing Goals
-Specific, measurable marketing objectives to be achieved within a defined timeframe.
-
-Marketing Channels
-The channels and platforms that will be used to reach the target audience.
-
-Content Strategy
-The approach to content creation and distribution across different channels.
-
-Budget
-Allocation of resources for various marketing activities.
-
-Timeline
-Schedule for implementing marketing activities and campaigns.
-`;
+    // Extract potential text content (this is imperfect but functional)
+    let extractedText = "";
+    
+    // Try to find text by looking for patterns in the PDF content
+    const textMatches = bufferStr.match(/\(\(([^)]+)\)\)|(\w[\w\s,.!?:;'"()-]{3,})/g);
+    if (textMatches && textMatches.length > 0) {
+      extractedText = textMatches.join('\n')
+        .replace(/\\\(/g, '(')
+        .replace(/\\\)/g, ')')
+        .replace(/\\n/g, '\n');
+    } else {
+      // If no matches found, use a slice of the buffer as fallback text
+      extractedText = bufferStr
+        .replace(/[^\x20-\x7E\r\n]/g, '') // Replace non-printable characters
+        .split(/\s{3,}/).join('\n'); // Try to detect paragraph breaks
+    }
     
     // Get the number of pages
     const numPages = estimatedPageCount;
     
-    // Set the raw text
-    const rawText = sampleText;
+    // Get processed raw text
+    const rawText = extractedText || "Failed to extract meaningful text from PDF.";
     
-    // Split text into pages
+    console.log(`Extracted approximately ${rawText.length} characters of text.`);
+    
+    // Split text into logical pages
     const pages = splitIntoPages(rawText);
+    
+    console.log(`Split content into ${pages.length} logical pages for analysis.`);
     
     // Identify sections in the template
     const sections = identifySections(pages);
+    
+    console.log(`Identified ${sections.length} sections in the template.`);
     
     return {
       numPages,
@@ -126,9 +115,32 @@ function identifySections(pages: string[]): TemplateSection[] {
     "Conclusion"
   ];
   
+  // Section purpose mapping (helps provide context for the AI)
+  const sectionPurposes: Record<string, string> = {
+    "Executive Summary": "Provide a high-level overview of the entire marketing plan, highlighting key points and objectives.",
+    "Company Overview": "Describe the company's background, products/services, and market positioning.",
+    "Market Analysis": "Analyze the target market size, trends, growth potential, and competitive landscape.",
+    "Competitive Analysis": "Identify key competitors, their strengths, weaknesses, and how the company differentiates.",
+    "Target Audience": "Define the primary and secondary customer segments with demographics, behaviors, and needs.",
+    "Value Proposition": "Articulate the unique value the company offers to its customers.",
+    "Marketing Strategy": "Outline the overall approach to achieve marketing objectives.",
+    "Marketing Goals": "List specific, measurable objectives with timeframes.",
+    "Marketing Channels": "Identify which platforms and methods will be used to reach the target audience.",
+    "Content Strategy": "Detail the content types, themes, and distribution plan across channels.",
+    "Social Media Strategy": "Specify platform-specific approaches, content types, and engagement tactics.",
+    "Budget": "Allocate financial resources across different marketing activities.",
+    "Timeline": "Provide a schedule for implementing various marketing activities.",
+    "KPIs": "Define metrics to measure marketing performance and success.",
+    "Conclusion": "Summarize the key points of the marketing plan and next steps."
+  };
+  
   // Regex patterns for identifying content formats
   const bulletPointPattern = /•|\*|\-\s+[A-Za-z]/g;
   const numberedListPattern = /\d+\.\s+[A-Za-z]/g;
+  const tablePattern = /\||\+[-+]+\+|┌|┐|└|┘|├|┤|┬|┴|┼|│|─/; // Common table ASCII patterns
+  const subheadingPattern = /(?:^|\n)([A-Z][A-Za-z\s]+:)/g; // Look for "Title:" patterns
+  // Simple regex for labeled paragraphs that doesn't use lookbehind/lookahead which are ES2018 features
+  const labeledParagraphsPattern = /([A-Z][A-Za-z\s]+):([\s\S]*?)(?:\n[A-Z]|$)/g;
   
   // Process each page
   pages.forEach((pageContent, pageIndex) => {
@@ -172,12 +184,54 @@ function identifySections(pages: string[]): TemplateSection[] {
       
       const sectionContent = pageContent.substring(startIndex + title.length, endIndex).trim();
       
-      // Determine format
+      // Determine basic format
       let format = "Paragraph";
       if (sectionContent.match(bulletPointPattern)) {
         format = "Bullet Points";
       } else if (sectionContent.match(numberedListPattern)) {
         format = "Numbered List";
+      } else if (sectionContent.match(tablePattern)) {
+        format = "Table";
+      }
+      
+      // Determine detailed format
+      let formatDetails = format;
+      
+      // Check for labeled paragraphs - using traditional iteration to avoid ES2018+ requirement
+      const labeledParagraphMatches = [];
+      let labelMatch;
+      while ((labelMatch = labeledParagraphsPattern.exec(sectionContent)) !== null) {
+        labeledParagraphMatches.push(labelMatch);
+      }
+      
+      if (labeledParagraphMatches.length > 0) {
+        const labels = labeledParagraphMatches.map(match => match[1].trim());
+        formatDetails = `${labeledParagraphMatches.length} labeled paragraphs`;
+        if (labels.length <= 3) {
+          formatDetails += ` with sections titled: ${labels.join(', ')}`;
+        }
+      }
+      
+      // Check for subheadings - using traditional iteration to avoid ES2018+ requirement
+      const subheadingMatches = [];
+      let subheadMatch;
+      while ((subheadMatch = subheadingPattern.exec(sectionContent)) !== null) {
+        subheadingMatches.push(subheadMatch[1]);
+      }
+      const subheadings = subheadingMatches;
+      if (subheadings.length > 0 && subheadings.length <= 4) {
+        formatDetails = `${format} with subheadings: ${subheadings.join(', ')}`;
+      } else if (subheadings.length > 4) {
+        formatDetails = `${format} with multiple subheadings`;
+      }
+      
+      // Extract potential examples if the content appears to be template-like
+      let examples = '';
+      if (sectionContent.includes('[') && sectionContent.includes(']')) {
+        const exampleMatches = sectionContent.match(/\[(.*?)\]/g);
+        if (exampleMatches && exampleMatches.length > 0) {
+          examples = `Example placeholders: ${exampleMatches.join(', ')}`;
+        }
       }
       
       // Estimate expected length
@@ -194,12 +248,19 @@ function identifySections(pages: string[]): TemplateSection[] {
         expectedLength = "Very Long (200+ words)";
       }
       
+      // Determine purpose
+      const purpose = sectionPurposes[title] || 
+        `Provide relevant information for the "${title}" section of the marketing template.`;
+      
       // Add to sections
       sections.push({
         title,
         format,
+        formatDetails,
         expectedLength,
-        page: pageIndex + 1
+        purpose,
+        page: pageIndex + 1,
+        examples: examples || undefined
       });
     });
   });
@@ -212,7 +273,9 @@ function identifySections(pages: string[]): TemplateSection[] {
       sections.push({
         title: "Main Content",
         format: "Paragraph",
+        formatDetails: "Standard paragraphs with potential bullet points for key information",
         expectedLength: "Medium (50-100 words)",
+        purpose: "Provide the main content for this template.",
         page: 1
       });
     } else {
@@ -220,7 +283,9 @@ function identifySections(pages: string[]): TemplateSection[] {
       sections.push({
         title: "Executive Summary",
         format: "Paragraph",
+        formatDetails: "Concise summary paragraphs highlighting key points",
         expectedLength: "Medium (50-100 words)",
+        purpose: "Summarize the key points of the entire template.",
         page: 1
       });
       
@@ -228,7 +293,9 @@ function identifySections(pages: string[]): TemplateSection[] {
         sections.push({
           title: "Marketing Strategy",
           format: "Bullet Points",
+          formatDetails: "List of strategic points with brief explanations",
           expectedLength: "Medium (50-100 words)",
+          purpose: "Outline the key strategic approaches for marketing.",
           page: 2
         });
       }
@@ -236,7 +303,9 @@ function identifySections(pages: string[]): TemplateSection[] {
       sections.push({
         title: "Conclusion",
         format: "Paragraph",
+        formatDetails: "Brief closing paragraph summarizing key takeaways",
         expectedLength: "Short (30-50 words)",
+        purpose: "Provide a concise conclusion to the document.",
         page: pages.length
       });
     }

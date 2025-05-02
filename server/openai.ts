@@ -50,8 +50,11 @@ You are a professional marketing content writer helping to generate content for 
 
 TEMPLATE SECTION INFORMATION:
 Title: ${section.title}
-Format Requirements: ${section.format}
+Basic Format: ${section.format}
+Detailed Format Requirements: ${section.formatDetails}
 Expected Length: ${section.expectedLength}
+Purpose of this Section: ${section.purpose}
+${section.examples ? `Examples or Placeholders: ${section.examples}` : ''}
 
 COMPANY INFORMATION:
 ${companyContext}
@@ -61,22 +64,44 @@ ${strategy || "No specific strategy provided."}
 
 TASK:
 Generate high-quality marketing content for the "${section.title}" section that:
-1. Matches the required format: ${section.format}
-2. Is approximately the expected length: ${section.expectedLength} 
-3. Integrates the company information provided
-4. Aligns with the marketing strategy
-5. Uses professional, engaging language appropriate for marketing materials
-6. Is factual and based only on the information provided
+1. STRICTLY adheres to the specified format requirements: "${section.formatDetails}"
+   (This is critical - the output must match the exact format required by the template)
+2. Is approximately the expected length: ${section.expectedLength}
+3. Fulfills the purpose of this section: ${section.purpose}
+4. Integrates the company information provided
+5. Aligns with the marketing strategy
+6. Uses professional, engaging language appropriate for marketing materials
+7. Is factual and based only on the information provided
+
+IMPORTANT FORMATTING NOTES:
+- If the format requires bullet points, use proper bullet point formatting with • symbols
+- If the format requires numbered lists, use proper numbered list formatting (1., 2., etc.)
+- If the format includes labeled sections or subheadings, make sure to include exactly those labels
+- If the format is tabular, structure the content to fit into a table format
+- Maintain any specified structural elements exactly as required
 
 Please provide ONLY the content without explanations, introductions, or annotations.
 `;
 
-    // Generate content using OpenAI
+    // Add a system message for better control
+    const systemPrompt = `
+You are an expert marketing content generator that creates precise, formatted content following EXACT format requirements.
+- You will strictly adhere to any format requirements specified
+- You will maintain section titles, bullet points, and other structural elements exactly as required
+- You will generate content that fits the expected length
+- You will use professional marketing language appropriate for business documents
+- You will never explain your answers or include notes/annotations - just the requested content
+`;
+
+    // Generate content using OpenAI with reduced temperature for more consistent formatting
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: prompt }
+      ],
       max_tokens: 1500,
-      temperature: 0.7,
+      temperature: 0.5, // Reduced temperature for more consistent formatting
     });
 
     return response.choices[0].message.content || "Error: No content generated";

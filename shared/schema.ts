@@ -66,9 +66,12 @@ export type FileInfo = {
 
 export type TemplateSection = {
   title: string;
-  format: string;
-  expectedLength: string;
+  format: string;             // Basic format type: "Paragraph", "Bullet Points", "Numbered List", "Table", etc.
+  formatDetails: string;      // Detailed formatting requirements, e.g. "2 labeled paragraphs, one titled X and one Y"
+  expectedLength: string;     // Approximate word or character count
+  purpose: string;            // The purpose of this section, if detectable
   page: number;
+  examples?: string;          // Optional example content from the template, if available
 };
 
 export type CompanyDocument = {
