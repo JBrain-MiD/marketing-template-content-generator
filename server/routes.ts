@@ -114,55 +114,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Company info routes
   app.post("/api/companies", upload.array("documents"), async (req, res) => {
+    console.log("Received company info submission");
+    console.log("Request body:", req.body);
+    
     try {
-      const parsedData = companyInfoStepSchema.parse(JSON.parse(req.body.data || "{}"));
+      // Verify data is present and valid JSON
+      if (!req.body.data) {
+        console.log("Missing data field in request body");
+        return res.status(400).json({ message: "Missing company data" });
+      }
       
-      // Process uploaded documents if any
-      const documents = [];
-      if (req.files && Array.isArray(req.files)) {
-        for (const file of req.files) {
-          const fileInfo: FileInfo = {
-            id: randomUUID(),
-            name: file.originalname,
-            size: file.size,
-            type: file.mimetype,
-            buffer: file.buffer
-          };
+      let parsedJson;
+      try {
+        parsedJson = JSON.parse(req.body.data);
+        console.log("Parsed JSON data:", parsedJson);
+      } catch (e) {
+        console.log("Error parsing JSON:", e);
+        return res.status(400).json({ message: "Invalid JSON in data field" });
+      }
+      
+      // Validate against schema
+      try {
+        const parsedData = companyInfoStepSchema.parse(parsedJson);
+        console.log("Validation passed:", parsedData);
+        
+        // Process uploaded documents if any
+        const documents = [];
+        if (req.files && Array.isArray(req.files)) {
+          console.log(`Processing ${req.files.length} uploaded document(s)`);
           
-          // Store document and get ID
-          const documentId = await storage.storeCompanyDocument(fileInfo);
-          
-          // Extract content from document for later use
-          let content = "";
-          if (file.mimetype === "application/pdf") {
-            const result = await analyzeTemplate(file.buffer);
-            content = result.rawText;
-          } else {
-            // For text files or other formats
-            content = file.buffer.toString("utf-8");
+          for (const file of req.files) {
+            const fileInfo: FileInfo = {
+              id: randomUUID(),
+              name: file.originalname,
+              size: file.size,
+              type: file.mimetype,
+              buffer: file.buffer
+            };
+            
+            // Store document and get ID
+            const documentId = await storage.storeCompanyDocument(fileInfo);
+            
+            // Extract content from document for later use
+            let content = "";
+            if (file.mimetype === "application/pdf") {
+              const result = await analyzeTemplate(file.buffer);
+              content = result.rawText;
+            } else {
+              // For text files or other formats
+              content = file.buffer.toString("utf-8");
+            }
+            
+            documents.push({
+              id: documentId,
+              name: file.originalname,
+              size: file.size,
+              content
+            });
           }
-          
-          documents.push({
-            id: documentId,
-            name: file.originalname,
-            size: file.size,
-            content
-          });
+        } else {
+          console.log("No documents uploaded");
         }
+        
+        // Create company record
+        const companyData: InsertCompany = {
+          ...parsedData,
+          documents
+        };
+        
+        console.log("Creating company with data:", {
+          ...companyData,
+          documents: companyData.documents ? `${companyData.documents.length} documents` : 'no documents'
+        });
+        
+        const company = await storage.createCompany(companyData);
+        console.log("Company created successfully:", company.id);
+        res.status(201).json(company);
+      } catch (validationError) {
+        if (validationError instanceof z.ZodError) {
+          console.log("Validation error:", validationError.errors);
+          return res.status(400).json({ message: "Validation error", errors: validationError.errors });
+        }
+        throw validationError;
       }
-      
-      // Create company record
-      const companyData: InsertCompany = {
-        ...parsedData,
-        documents
-      };
-      
-      const company = await storage.createCompany(companyData);
-      res.status(201).json(company);
     } catch (error: any) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Validation error", errors: error.errors });
-      }
+      console.error("Company info submission error:", error);
       res.status(500).json({ message: error.message || "Failed to save company information" });
     }
   });
