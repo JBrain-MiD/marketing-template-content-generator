@@ -65,13 +65,16 @@ export type FileInfo = {
 };
 
 export type TemplateSection = {
-  title: string;
+  slideNumber: number;        // The slide number in the presentation
+  title: string;              // The title or heading of the slide
   format: string;             // Basic format type: "Paragraph", "Bullet Points", "Numbered List", "Table", etc.
   formatDetails: string;      // Detailed formatting requirements, e.g. "2 labeled paragraphs, one titled X and one Y"
   expectedLength: string;     // Approximate word or character count
-  purpose: string;            // The purpose of this section, if detectable
-  page: number;
+  purpose: string;            // The purpose of this slide in the presentation
+  needsContent: boolean;      // Whether this slide needs custom content (title slides, agenda slides often don't)
+  page: number;               // The page number in the PDF (may differ from slide number)
   examples?: string;          // Optional example content from the template, if available
+  originalText?: string;      // The original text content extracted from the slide
 };
 
 export type CompanyDocument = {
@@ -82,9 +85,11 @@ export type CompanyDocument = {
 };
 
 export type GeneratedContent = {
-  sectionId: string;
-  sectionTitle: string;
-  content: string;
+  slideNumber: number;        // The slide number in the presentation  
+  slideTitle: string;         // The title of the slide
+  content: string;            // The generated content for this slide
+  format: string;             // The format used for the content
+  needsContent: boolean;      // Whether this slide needed custom content
 };
 
 // Step form schemas

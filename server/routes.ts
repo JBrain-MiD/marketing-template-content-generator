@@ -292,9 +292,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         generatedContent.push({
-          sectionId: section.title.replace(/\s+/g, '_').toLowerCase(),
-          sectionTitle: section.title,
-          content
+          slideNumber: section.slideNumber,
+          slideTitle: section.title,
+          content,
+          format: section.format,
+          needsContent: section.needsContent
         });
       }
       
