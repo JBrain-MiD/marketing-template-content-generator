@@ -21,31 +21,54 @@ export default function Home() {
         </p>
       </div>
       
-      <div className="grid md:grid-cols-2 gap-8 mb-10">
-        <Card className="overflow-hidden">
-          <div className="h-48 bg-gradient-to-r from-primary/80 to-primary flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-20 w-20 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className="flex flex-col md:flex-row gap-5 mb-10 relative">
+        {/* Process connecting lines */}
+        <div className="hidden md:block absolute top-1/2 left-0 right-0 h-1 bg-gray-200 -z-10"></div>
+        
+        {/* Step 1 */}
+        <Card className="overflow-hidden flex-1 relative">
+          <div className="absolute -top-5 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center text-lg font-bold">1</div>
+          <div className="h-40 bg-gradient-to-r from-primary/80 to-primary flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </div>
           <CardContent className="p-6">
-            <h2 className="text-2xl font-semibold mb-3">Upload Your Template</h2>
+            <h2 className="text-xl font-semibold mb-3">1. Upload Your Template</h2>
             <p className="text-gray-600 mb-4">
               Start by uploading your marketing template PDF. Our system will analyze its structure and identify content requirements.
             </p>
           </CardContent>
         </Card>
         
-        <Card className="overflow-hidden">
-          <div className="h-48 bg-gradient-to-r from-secondary to-secondary/80 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-20 w-20 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        {/* Step 2 */}
+        <Card className="overflow-hidden flex-1 relative">
+          <div className="absolute -top-5 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center text-lg font-bold">2</div>
+          <div className="h-40 bg-gradient-to-r from-indigo-500 to-indigo-600 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
           </div>
           <CardContent className="p-6">
-            <h2 className="text-2xl font-semibold mb-3">Generate Content</h2>
+            <h2 className="text-xl font-semibold mb-3">2. Provide Strategic Input</h2>
             <p className="text-gray-600 mb-4">
-              Provide company information and strategy details, then let our AI generate tailored content for each section.
+              Enter your company information and marketing strategy. You can also upload relevant documents to enhance content.
+            </p>
+          </CardContent>
+        </Card>
+        
+        {/* Step 3 */}
+        <Card className="overflow-hidden flex-1 relative">
+          <div className="absolute -top-5 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center text-lg font-bold">3</div>
+          <div className="h-40 bg-gradient-to-r from-secondary to-secondary/80 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <CardContent className="p-6">
+            <h2 className="text-xl font-semibold mb-3">3. Generate Content</h2>
+            <p className="text-gray-600 mb-4">
+              Our AI generates tailored marketing content for each section of your template, ready to use in minutes.
             </p>
           </CardContent>
         </Card>
