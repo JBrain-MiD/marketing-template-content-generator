@@ -92,8 +92,16 @@ export const templateStepSchema = z.object({
 
 export const companyInfoStepSchema = z.object({
   name: z.string().min(1, "Company name is required"),
-  website: z.string().url("Please enter a valid URL").or(z.string().length(0)).optional(),
-  linkedin: z.string().url("Please enter a valid URL").or(z.string().length(0)).optional(),
+  website: z.string()
+    .refine(val => val === '' || val.startsWith('http'), {
+      message: 'Website URL must start with http:// or https://'
+    })
+    .optional(),
+  linkedin: z.string()
+    .refine(val => val === '' || val.startsWith('http'), {
+      message: 'LinkedIn URL must start with http:// or https://'
+    })
+    .optional(),
   industry: z.string().optional(),
   additionalNotes: z.string().optional(),
   documents: z.array(z.any()).optional(),

@@ -64,13 +64,31 @@ export default function CompanyInfoStep() {
     try {
       setIsSubmitting(true);
       
+      // Ensure company name is provided (this is required in the schema)
+      if (!data.name || data.name.trim() === '') {
+        toast({
+          title: "Company name required",
+          description: "Please enter a company name before proceeding",
+          variant: "destructive"
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Clean up empty fields to avoid validation issues
+      const cleanData = Object.fromEntries(
+        Object.entries(data).filter(([_, value]) => 
+          value !== undefined && value !== null && value !== ''
+        )
+      );
+      
       // Debug data being submitted
-      console.log("Form data being submitted:", data);
+      console.log("Form data being submitted:", cleanData);
       
       const formData = new FormData();
       
       // Append company info as JSON
-      formData.append("data", JSON.stringify(data));
+      formData.append("data", JSON.stringify(cleanData));
       
       // Append company documents
       companyDocuments.forEach(doc => {
