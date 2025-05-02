@@ -287,8 +287,8 @@ export default function GenerateStep() {
                   <TabsList className="mb-4 h-auto flex-wrap gap-1 bg-transparent p-0">
                     {generatedContent.map((section, index) => (
                       <TabsTrigger 
-                        key={section.slideNumber} 
-                        value={section.slideNumber.toString()} 
+                        key={section.slideNumber || index + 1} 
+                        value={(section.slideNumber || index + 1).toString()} 
                         className="px-4 py-2 rounded-full data-[state=active]:bg-primary data-[state=active]:text-white shadow-none mr-2 mb-2 text-sm"
                       >
                         <span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center mr-2 text-xs">
@@ -300,12 +300,12 @@ export default function GenerateStep() {
                   </TabsList>
                 </div>
                 
-                {generatedContent.map((section) => (
-                  <TabsContent key={section.slideNumber} value={section.slideNumber.toString()}>
+                {generatedContent.map((section, idx) => (
+                  <TabsContent key={section.slideNumber || idx + 1} value={(section.slideNumber || idx + 1).toString()}>
                     <div className="p-6 border border-gray-200 rounded-md bg-white shadow-sm">
                       <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-100">
                         <h4 className="text-lg font-medium text-gray-800">
-                          <span className="text-gray-500 mr-2">Slide {section.slideNumber}:</span>
+                          <span className="text-gray-500 mr-2">Slide {section.slideNumber || idx + 1}:</span>
                           {section.slideTitle}
                           <span className="ml-3 text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600">
                             {section.format}
@@ -355,10 +355,11 @@ export default function GenerateStep() {
                               then fall back to template.sections if needed */}
                             {(() => {
                               // First try to find matching section in templateSections by slideNumber
+                              const slideNum = section.slideNumber || 1;
                               const templateSection = 
-                                templateSections.find(ts => ts.slideNumber === section.slideNumber) ||
-                                (template.sections && template.sections.length > 0 ? 
-                                  template.sections[section.slideNumber-1] : null);
+                                templateSections.find(ts => ts.slideNumber === slideNum) ||
+                                (template.sections && template.sections.length > 0 && slideNum > 0 ? 
+                                  template.sections[slideNum-1] : null);
                               
                               if (templateSection) {
                                 return (
