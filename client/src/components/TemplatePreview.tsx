@@ -13,13 +13,11 @@ export default function TemplatePreview({ template }: TemplatePreviewProps) {
       <CardContent className="p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="font-medium text-lg text-gray-800">Template Analysis</h3>
-          <Link href="/template">
-            <a className="text-primary text-sm font-medium hover:text-primary-dark flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              Change Template
-            </a>
+          <Link href="/template" className="text-primary text-sm font-medium hover:text-primary-dark flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Change Template
           </Link>
         </div>
         

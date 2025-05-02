@@ -64,6 +64,9 @@ export default function CompanyInfoStep() {
     try {
       setIsSubmitting(true);
       
+      // Debug data being submitted
+      console.log("Form data being submitted:", data);
+      
       const formData = new FormData();
       
       // Append company info as JSON
@@ -74,23 +77,72 @@ export default function CompanyInfoStep() {
         formData.append("documents", doc);
       });
       
-      const response = await apiRequest("POST", "/api/companies", null, {
-        body: formData,
-        headers: {}, // Remove Content-Type header for FormData
+      // Use XMLHttpRequest for more direct control and debugging
+      return new Promise<any>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        
+        xhr.open("POST", "/api/companies", true);
+        
+        xhr.onload = function() {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const result = JSON.parse(xhr.responseText);
+              console.log("Company info submission succeeded:", result);
+              
+              // Save company info to store
+              setCompany(result);
+              
+              toast({
+                title: "Company information saved",
+                description: "Your company profile has been created successfully"
+              });
+              
+              // Navigate to strategy step
+              navigate("/strategy");
+              
+              resolve(result);
+            } catch (error) {
+              console.error("Error parsing response:", error);
+              reject(error);
+            }
+          } else {
+            console.error("Submission failed with status:", xhr.status);
+            console.error("Response text:", xhr.responseText);
+            
+            try {
+              const errorResponse = JSON.parse(xhr.responseText);
+              toast({
+                title: "Submission failed",
+                description: errorResponse.message || `Server returned status: ${xhr.status}`,
+                variant: "destructive"
+              });
+            } catch (e) {
+              toast({
+                title: "Submission failed",
+                description: `Server returned status: ${xhr.status}`,
+                variant: "destructive"
+              });
+            }
+            
+            reject(new Error(`Server returned status: ${xhr.status}`));
+          }
+          setIsSubmitting(false);
+        };
+        
+        xhr.onerror = function() {
+          console.error("XHR error occurred");
+          toast({
+            title: "Submission failed",
+            description: "Network error occurred",
+            variant: "destructive"
+          });
+          setIsSubmitting(false);
+          reject(new Error("Network error"));
+        };
+        
+        console.log("Sending XHR request to /api/companies");
+        xhr.send(formData);
       });
-      
-      const result = await response.json();
-      
-      // Save company info to store
-      setCompany(result);
-      
-      toast({
-        title: "Company information saved",
-        description: "Your company profile has been created successfully"
-      });
-      
-      // Navigate to strategy step
-      navigate("/strategy");
     } catch (error) {
       console.error("Company info submission error:", error);
       toast({
