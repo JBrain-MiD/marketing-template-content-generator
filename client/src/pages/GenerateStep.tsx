@@ -54,13 +54,15 @@ export default function GenerateStep() {
   }
   
   if (!company) {
-    console.log("No company found, redirecting to company-info page");
+    console.log("No company found, redirecting to company-info page", company);
     navigate("/company-info");
     return null;
   }
   
   if (!project || !strategy) {
-    console.log("No project or strategy found, redirecting to strategy page");
+    console.log("No project or strategy found, redirecting to strategy page", {project, strategy});
+    // Log the entire company and project objects for debugging
+    if (company) console.log("Navigating to strategy page with company:", company);
     navigate("/strategy");
     return null;
   }
