@@ -29,10 +29,11 @@ export default function FileUpload({
   
   const { getRootProps, getInputProps, open } = useDropzone({
     onDrop,
-    accept: accept.split(',').reduce((acc, curr) => {
-      acc[curr] = [];
-      return acc;
-    }, {} as Record<string, string[]>),
+    accept: {
+      'application/pdf': ['.pdf'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'text/plain': ['.txt']
+    },
     maxFiles,
     maxSize,
     onDragEnter: () => setIsDragActive(true),

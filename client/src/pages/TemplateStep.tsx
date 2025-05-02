@@ -24,7 +24,9 @@ export default function TemplateStep() {
     const file = files[0]; // Only accept one template file
     
     // Check file type
-    if (file.type !== "application/pdf") {
+    const validPdfTypes = ["application/pdf"];
+    if (!validPdfTypes.includes(file.type)) {
+      console.log("Invalid file type:", file.type);
       toast({
         title: "Invalid file type",
         description: "Please upload a PDF file",
