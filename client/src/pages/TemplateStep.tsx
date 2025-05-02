@@ -1,0 +1,168 @@
+import { useState } from "react";
+import { useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import StepProgress from "@/components/StepProgress";
+import FileUpload from "@/components/FileUpload";
+import UploadedFiles from "@/components/UploadedFiles";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { useStore } from "@/lib/store";
+
+export default function TemplateStep() {
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
+  const { setTemplate } = useStore();
+  
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadedTemplate, setUploadedTemplate] = useState<File | null>(null);
+  const [templateAnalysis, setTemplateAnalysis] = useState<any>(null);
+  
+  const handleTemplateUpload = async (files: File[]) => {
+    if (files.length === 0) return;
+    
+    const file = files[0]; // Only accept one template file
+    
+    // Check file type
+    if (file.type !== "application/pdf") {
+      toast({
+        title: "Invalid file type",
+        description: "Please upload a PDF file",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Set file for display
+    setUploadedTemplate(file);
+    
+    // Upload to server
+    try {
+      setIsUploading(true);
+      
+      const formData = new FormData();
+      formData.append("templateFile", file);
+      
+      const response = await apiRequest("POST", "/api/templates/upload", null, {
+        body: formData,
+        headers: {}, // Remove Content-Type header for FormData
+      });
+      
+      const result = await response.json();
+      
+      setTemplateAnalysis(result);
+      setTemplate(result);
+      
+      toast({
+        title: "Template uploaded successfully",
+        description: `${result.sections.length} sections detected`
+      });
+    } catch (error) {
+      console.error("Template upload error:", error);
+      toast({
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : "Failed to upload template",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+  
+  const removeTemplate = () => {
+    setUploadedTemplate(null);
+    setTemplateAnalysis(null);
+  };
+  
+  const goToNextStep = () => {
+    if (!templateAnalysis) {
+      toast({
+        title: "Template required",
+        description: "Please upload a template before proceeding",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    navigate("/company-info");
+  };
+  
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <StepProgress currentStep={1} />
+      
+      <div className="max-w-4xl mx-auto">
+        <h2 className="text-2xl font-semibold mb-6 text-gray-800">Upload Template</h2>
+        <p className="text-gray-600 mb-8">
+          Start by uploading your marketing template PDF. We'll analyze its structure to help generate tailored content.
+        </p>
+        
+        <Card className="mb-8">
+          <CardContent className="p-6">
+            <h3 className="font-medium text-lg mb-4 text-gray-800">Template PDF</h3>
+            
+            {!uploadedTemplate ? (
+              <FileUpload
+                onFilesSelected={handleTemplateUpload}
+                isLoading={isUploading}
+                accept=".pdf"
+                maxFiles={1}
+                helpText="Upload your marketing template PDF (Max 10MB)"
+              />
+            ) : (
+              <UploadedFiles
+                files={[uploadedTemplate]}
+                onRemove={removeTemplate}
+              />
+            )}
+          </CardContent>
+        </Card>
+        
+        {templateAnalysis && (
+          <Card className="mb-8">
+            <CardContent className="p-6">
+              <h3 className="font-medium text-lg mb-4 text-gray-800">Template Analysis</h3>
+              
+              <div className="border border-gray-200 rounded-md">
+                <div className="p-4 border-b border-gray-200 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-primary mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <div>
+                    <div className="text-sm font-medium text-gray-800">{templateAnalysis.name}</div>
+                    <div className="text-xs text-gray-500">
+                      {templateAnalysis.numPages} pages • {templateAnalysis.sections.length} content sections detected
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+                  {templateAnalysis.sections.map((section: any, index: number) => (
+                    <div key={index} className="bg-gray-50 rounded-md p-3">
+                      <h4 className="text-sm font-medium text-gray-700 mb-1">{section.title}</h4>
+                      <p className="text-xs text-gray-500">Format: {section.format}</p>
+                      <p className="text-xs text-gray-500">Length: {section.expectedLength}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        
+        <div className="flex justify-end">
+          <Button
+            onClick={goToNextStep}
+            className="bg-primary hover:bg-primary-dark text-white rounded-md px-6 py-2 text-sm font-medium transition flex items-center"
+            disabled={isUploading}
+          >
+            Next: Company Info
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
