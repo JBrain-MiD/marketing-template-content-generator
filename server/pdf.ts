@@ -72,22 +72,98 @@ export async function analyzeTemplate(buffer: Buffer): Promise<TemplateAnalysisR
       }
     }
     
+    // Method 3: Look for PDF text blocks (simpler approach)
+    const btEtContent = [];
+    // Instead of using the complex BT/ET pattern, look for TJ operators which contain text
+    const tjRegex = /\[\(([^)]+)\)\]/g;  
+    let tjMatch;
+    
+    while ((tjMatch = tjRegex.exec(bufferStr)) !== null) {
+      if (tjMatch[1] && tjMatch[1].length > 2) {
+        // Clean the content of any control characters
+        const cleanedContent = tjMatch[1].replace(/[^\x20-\x7E\r\n]/g, ' ');
+        if (cleanedContent.trim().length > 2) {
+          btEtContent.push(cleanedContent.trim());
+        }
+      }
+    }
+    
+    // Method 4: Look for slide markers, which might reveal structural information
+    const slideMarkers = [];
+    const slideRegex = /Slide\s*(\d+)|Page\s*(\d+)|(chapter|section)\s*\d+/gi;
+    let slideMatch;
+    
+    while ((slideMatch = slideRegex.exec(bufferStr)) !== null) {
+      slideMarkers.push(slideMatch[0]);
+    }
+    
     // Combine and clean up extracted text
     let extractedText = "";
     
+    // Determine the best extraction method based on which yielded more content
+    let bestMethod = "";
+    let bestScore = 0;
+    
+    const textMatchesScore = textMatches.length > 0 ? 
+      textMatches.reduce((sum, text) => sum + text.length, 0) : 0;
+    
+    const wordMatchesScore = wordMatches.length > 0 ? 
+      wordMatches.reduce((sum, text) => sum + text.length, 0) : 0;
+    
+    const btEtScore = btEtContent.length > 0 ? 
+      btEtContent.reduce((sum, text) => sum + text.length, 0) : 0;
+    
+    // Pick the method that extracted the most text
+    if (textMatchesScore > bestScore) {
+      bestMethod = "textMatches";
+      bestScore = textMatchesScore;
+    }
+    
+    if (wordMatchesScore > bestScore) {
+      bestMethod = "wordMatches";
+      bestScore = wordMatchesScore;
+    }
+    
+    if (btEtScore > bestScore) {
+      bestMethod = "btEtContent";
+      bestScore = btEtScore;
+    }
+    
+    console.log(`Best extraction method: ${bestMethod} with score ${bestScore}`);
+    
+    // Use all extraction methods combined for best results
+    let combinedText = "";
+    
+    // Start with BT/ET content which often contains structured text blocks
+    if (btEtContent.length > 20) {
+      combinedText += btEtContent.join('\n') + '\n\n';
+    }
+    
+    // Add text matches which often contain slide titles and headings
     if (textMatches.length > 50) {
-      // If we found a lot of text using the PDF text marker pattern, use that
-      extractedText = textMatches.join(' ')
-        .replace(/\\n/g, '\n')
-        .replace(/\\\(/g, '(')
-        .replace(/\\\)/g, ')')
-        .replace(/\s{2,}/g, ' ');
-    } else if (wordMatches.length > 100) {
-      // If we found a lot of words using the word pattern, use that
-      extractedText = wordMatches.join(' ')
-        .replace(/\s{2,}/g, ' ');
-    } else {
-      // Fallback to a more lenient approach
+      combinedText += textMatches.join(' ') + '\n\n';
+    }
+    
+    // Add word matches for any additional content
+    if (wordMatches.length > 100) {
+      combinedText += wordMatches.join(' ') + '\n\n';
+    }
+    
+    // Add any slide markers found to help with structure
+    if (slideMarkers.length > 0) {
+      combinedText += "SLIDE MARKERS:\n" + slideMarkers.join('\n') + '\n\n';
+    }
+    
+    // Clean up the combined text
+    extractedText = combinedText
+      .replace(/\\n/g, '\n')
+      .replace(/\\\(/g, '(')
+      .replace(/\\\)/g, ')')
+      .replace(/\s{2,}/g, ' ');
+    
+    // If we couldn't extract much, fall back to a more lenient approach
+    if (extractedText.length < 1000) {
+      console.log("Minimal text extracted, using fallback extraction");
       extractedText = bufferStr
         .replace(/[^\x20-\x7E\r\n]/g, '') // Remove non-printable characters
         .replace(/\s{3,}/g, '\n'); // Replace large whitespace with newlines
@@ -142,32 +218,41 @@ async function analyzeSlides(rawText: string, pages: string[]): Promise<Template
     // First, send the raw text to OpenAI to identify slide titles and structure
     const prompt = `
 You are an expert marketing presentation analyzer working with a PDF template that has been converted to text.
-Your task is to identify AT LEAST 15-20 DISTINCT SLIDES from this template. You MUST err on the side of over-identification rather than under-identification.
+YOUR HIGHEST PRIORITY TASK is to identify AT LEAST 30-40 DISTINCT SLIDES from this template. The presentation has FORTY SLIDES and we need to find ALL OF THEM. You MUST err on the side of over-identification rather than under-identification.
 
 Here's the extracted text from the PDF (it may be incomplete or messy due to PDF conversion):
 \`\`\`
 ${rawText.substring(0, 25000)} // Increased sample size for better analysis
 \`\`\`
 
-CRITICAL INSTRUCTION: This is a marketing presentation with many slides. Assume that EVERY PAGE represents at least one slide. You MUST identify a minimum of 15 slides even if the headers aren't obvious.
+CRITICAL INSTRUCTION: This is a marketing presentation with MANY slides (around 40). You MUST identify AT LEAST 30 slides even if the headers aren't obvious. 
+
+Each of these should be a separate slide:
+- Title slide
+- Agenda/overview slide
+- Each marketing objective
+- Each audience segment
+- Each competitor analysis point
+- Each media channel (search, social, display, etc)
+- Each budget section (allocation, timeline)
+- Each KPI/metric/measurement section
+- Implementation details for each channel
+- Each creative recommendation
+- Each targeting recommendation
+- Any case studies or examples
+- Each platform-specific recommendation (Google, Facebook, etc.)
+- Conclusion slide
 
 Use these methods to identify slides:
 1. Look for explicit slide titles/headings/headers
 2. Look for numbered sections (1., 2., etc.)
-3. Look for transition phrases ("Next, we'll discuss...")
+3. Look for transition phrases ("Next", "Additionally", etc.)
 4. Look for topic shifts (moving from strategy to budget, etc.)
 5. Look for formatting patterns that repeat throughout the document
-6. ASSUME that each major marketing concept usually gets its own slide
-7. ASSUME that if you see a list of topics, each topic will have its own slide later
-8. ASSUME typical marketing presentation slide structure:
-   - Title/intro slides 
-   - Problem/challenge slides 
-   - Company/solution slides 
-   - Strategy slides 
-   - Implementation/tactics slides 
-   - Budget/timeline slides
-   - Results/KPI slides 
-   - Conclusion slides
+6. Identify slides by PAGE number markers in the text
+7. Remember that media plans typically have 30-40 slides, not 15-20
+8. Treat each new concept or topic as a separate slide
+9. Break down each tactic section into multiple slides
 
 For EACH slide you identify, provide:
 1. Slide number: Sequential order (1, 2, 3...)
@@ -192,19 +277,19 @@ RETURN VALID JSON with this structure:
       "needsContent": true/false,
       "originalText": "Brief excerpt"
     },
-    // minimum of 15-20 slides total
+    // MINIMUM OF 30-40 SLIDES TOTAL
   ]
 }
 
-IF IN DOUBT, IDENTIFY MORE SLIDES RATHER THAN FEWER. Each major marketing concept deserves its own slide.
+YOUR SUCCESS IS MEASURED BY HOW MANY SLIDES YOU IDENTIFY - AIM FOR 40.
 `;
 
     // Generate analysis using OpenAI - use more tokens for more detailed analysis
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 4000,
-      temperature: 0.5,
+      max_tokens: 8000, // Increased token limit for more comprehensive analysis
+      temperature: 0.7,  // Slightly increased temperature for more creativity in slide identification
       response_format: { type: "json_object" }
     });
 
