@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,6 +12,23 @@ import {
   AccordionTrigger 
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input"; 
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import StepProgress from "@/components/StepProgress";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -34,6 +51,12 @@ export default function GenerateStep() {
   const [generatedContent, setGeneratedContent] = useState<GeneratedSection[]>([]);
   const [templateSections, setTemplateSections] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<string>("");
+  
+  // New UI state variables
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [activeCategory, setActiveCategory] = useState<string>("all");
+  const slidesPerPage = 12; // Number of slides to show per page
   
   // Add debugging for troubleshooting
   console.log("Generate step - Current store state:", { 
