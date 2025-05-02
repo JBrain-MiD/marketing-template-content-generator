@@ -16,21 +16,41 @@ export default function GenerateStep() {
   const { template, company, project, strategy } = useStore();
   
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedContent, setGeneratedContent] = useState<any[]>([]);
+  interface GeneratedSection {
+    sectionId: string;
+    sectionTitle: string;
+    content: string;
+  }
+  
+  const [generatedContent, setGeneratedContent] = useState<GeneratedSection[]>([]);
   const [activeTab, setActiveTab] = useState<string>("");
+  
+  // Add debugging for troubleshooting
+  console.log("Generate step - Current store state:", { 
+    templateExists: !!template, 
+    companyExists: !!company,
+    projectExists: !!project,
+    strategyExists: !!strategy,
+    templateDetails: template ? `ID: ${template.id}` : 'none',
+    companyDetails: company ? `ID: ${company.id}` : 'none',
+    projectDetails: project ? `ID: ${project.id}` : 'none'
+  });
   
   // If missing required data, redirect to appropriate step
   if (!template) {
+    console.log("No template found, redirecting to template page");
     navigate("/template");
     return null;
   }
   
   if (!company) {
+    console.log("No company found, redirecting to company-info page");
     navigate("/company-info");
     return null;
   }
   
   if (!project || !strategy) {
+    console.log("No project or strategy found, redirecting to strategy page");
     navigate("/strategy");
     return null;
   }
@@ -45,15 +65,81 @@ export default function GenerateStep() {
   const generateContent = async () => {
     try {
       setIsGenerating(true);
+      console.log(`Generating content for project ID: ${project.id}`);
       
-      const response = await apiRequest("POST", `/api/projects/${project.id}/generate`);
-      const result = await response.json();
-      
-      setGeneratedContent(result.generatedContent || []);
-      
-      toast({
-        title: "Content generated",
-        description: `Generated content for ${result.generatedContent?.length || 0} sections`
+      // Use XMLHttpRequest for more direct control and debugging
+      return new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `/api/projects/${project.id}/generate`, true);
+        xhr.setRequestHeader("Content-Type", "application/json");
+        
+        xhr.onload = function() {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const result = JSON.parse(xhr.responseText);
+              console.log("Content generation succeeded:", result);
+              
+              setGeneratedContent(result.generatedContent || []);
+              
+              toast({
+                title: "Content generated",
+                description: `Generated content for ${result.generatedContent?.length || 0} sections`
+              });
+              
+              resolve();
+            } catch (error) {
+              console.error("Error parsing response:", error);
+              reject(error);
+            }
+          } else {
+            console.error("Content generation failed with status:", xhr.status);
+            console.error("Response text:", xhr.responseText);
+            
+            try {
+              const errorResponse = JSON.parse(xhr.responseText);
+              toast({
+                title: "Generation failed",
+                description: errorResponse.message || `Server returned status: ${xhr.status}`,
+                variant: "destructive"
+              });
+            } catch (e) {
+              toast({
+                title: "Generation failed",
+                description: `Server returned status: ${xhr.status}`,
+                variant: "destructive"
+              });
+            }
+            
+            reject(new Error(`Server returned status: ${xhr.status}`));
+          }
+          setIsGenerating(false);
+        };
+        
+        xhr.onerror = function() {
+          console.error("XHR error occurred during content generation");
+          toast({
+            title: "Generation failed",
+            description: "Network error occurred",
+            variant: "destructive"
+          });
+          setIsGenerating(false);
+          reject(new Error("Network error"));
+        };
+        
+        xhr.timeout = 120000; // 2 minutes timeout for content generation
+        xhr.ontimeout = function() {
+          console.error("Content generation timed out");
+          toast({
+            title: "Generation failed",
+            description: "Request timed out. The content generation may have taken too long.",
+            variant: "destructive"
+          });
+          setIsGenerating(false);
+          reject(new Error("Request timed out"));
+        };
+        
+        console.log("Sending content generation request");
+        xhr.send();
       });
     } catch (error) {
       console.error("Content generation error:", error);
@@ -62,7 +148,6 @@ export default function GenerateStep() {
         description: error instanceof Error ? error.message : "Failed to generate content",
         variant: "destructive"
       });
-    } finally {
       setIsGenerating(false);
     }
   };
@@ -131,7 +216,7 @@ export default function GenerateStep() {
                   <h4 className="text-sm font-medium text-gray-700 mb-4">Generating content for sections:</h4>
                   
                   <div className="space-y-4">
-                    {template.sections.map((section, index) => (
+                    {template.sections.map((section: { title: string }, index: number) => (
                       <div key={index} className="flex items-center">
                         <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mr-3">
                           <span className="text-primary text-sm font-medium">{index + 1}</span>

@@ -67,6 +67,9 @@ export default function StrategyStep() {
     try {
       setIsSubmitting(true);
       
+      console.log("Submitting strategy:", data);
+      console.log("Using template ID:", template.id, "and company ID:", company.id);
+      
       // Create project
       const projectData = {
         templateId: template.id,
@@ -74,20 +77,78 @@ export default function StrategyStep() {
         strategy: data.strategy
       };
       
-      const response = await apiRequest("POST", "/api/projects", projectData);
-      const result = await response.json();
-      
-      // Save project and strategy to store
-      setProject(result);
-      setStrategy(data.strategy);
-      
-      toast({
-        title: "Strategy saved",
-        description: "Your marketing strategy has been saved successfully"
+      // Use XMLHttpRequest for more direct control and debugging
+      return new Promise<any>((resolve, reject) => {
+        // First update the strategy in the store
+        setStrategy(data.strategy);
+        
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "/api/projects", true);
+        xhr.setRequestHeader("Content-Type", "application/json");
+        
+        xhr.onload = function() {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const result = JSON.parse(xhr.responseText);
+              console.log("Project creation succeeded:", result);
+              
+              // Save project to store
+              setProject(result);
+              
+              toast({
+                title: "Strategy saved",
+                description: "Your marketing strategy has been saved successfully"
+              });
+              
+              // Use a slight delay before navigation to ensure store updates are processed
+              setTimeout(() => {
+                console.log("Navigating to generate page with project:", result);
+                navigate("/generate");
+              }, 100);
+              
+              resolve(result);
+            } catch (error) {
+              console.error("Error parsing response:", error);
+              reject(error);
+            }
+          } else {
+            console.error("Project creation failed with status:", xhr.status);
+            console.error("Response text:", xhr.responseText);
+            
+            try {
+              const errorResponse = JSON.parse(xhr.responseText);
+              toast({
+                title: "Submission failed",
+                description: errorResponse.message || `Server returned status: ${xhr.status}`,
+                variant: "destructive"
+              });
+            } catch (e) {
+              toast({
+                title: "Submission failed",
+                description: `Server returned status: ${xhr.status}`,
+                variant: "destructive"
+              });
+            }
+            
+            reject(new Error(`Server returned status: ${xhr.status}`));
+          }
+          setIsSubmitting(false);
+        };
+        
+        xhr.onerror = function() {
+          console.error("XHR error occurred");
+          toast({
+            title: "Submission failed",
+            description: "Network error occurred",
+            variant: "destructive"
+          });
+          setIsSubmitting(false);
+          reject(new Error("Network error"));
+        };
+        
+        console.log("Sending XHR request to /api/projects");
+        xhr.send(JSON.stringify(projectData));
       });
-      
-      // Navigate to generate step
-      navigate("/generate");
     } catch (error) {
       console.error("Strategy submission error:", error);
       toast({
@@ -95,7 +156,6 @@ export default function StrategyStep() {
         description: error instanceof Error ? error.message : "Failed to save strategy",
         variant: "destructive"
       });
-    } finally {
       setIsSubmitting(false);
     }
   };
