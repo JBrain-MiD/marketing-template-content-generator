@@ -14,6 +14,11 @@ export async function generateContent(input: ContentGenerationInput): Promise<st
   try {
     const { section, company, strategy } = input;
     
+    // Check if this slide needs custom content
+    if (!section.needsContent) {
+      return "This slide doesn't require custom content. It appears to be a title slide, table of contents, or other structural element that should remain as-is in the template.";
+    }
+    
     // Build company context from available data
     let companyContext = `Company Name: ${company.name}\n`;
     
@@ -48,13 +53,15 @@ export async function generateContent(input: ContentGenerationInput): Promise<st
     const prompt = `
 You are a professional marketing content writer helping to generate content for a marketing template.
 
-TEMPLATE SECTION INFORMATION:
-Title: ${section.title}
+SLIDE INFORMATION:
+Slide Number: ${section.slideNumber}
+Slide Title: ${section.title}
 Basic Format: ${section.format}
 Detailed Format Requirements: ${section.formatDetails}
 Expected Length: ${section.expectedLength}
-Purpose of this Section: ${section.purpose}
+Purpose of this Slide: ${section.purpose}
 ${section.examples ? `Examples or Placeholders: ${section.examples}` : ''}
+${section.originalText ? `Original Text on Slide: ${section.originalText}` : ''}
 
 COMPANY INFORMATION:
 ${companyContext}
@@ -63,15 +70,16 @@ MARKETING STRATEGY:
 ${strategy || "No specific strategy provided."}
 
 TASK:
-Generate high-quality marketing content for the "${section.title}" section that:
+Generate high-quality marketing content for slide ${section.slideNumber} titled "${section.title}" that:
 1. STRICTLY adheres to the specified format requirements: "${section.formatDetails}"
    (This is critical - the output must match the exact format required by the template)
 2. Is approximately the expected length: ${section.expectedLength}
-3. Fulfills the purpose of this section: ${section.purpose}
+3. Fulfills the purpose of this slide: ${section.purpose}
 4. Integrates the company information provided
 5. Aligns with the marketing strategy
-6. Uses professional, engaging language appropriate for marketing materials
+6. Uses professional, engaging language appropriate for marketing presentations
 7. Is factual and based only on the information provided
+8. Preserves the style and structure of the original template
 
 IMPORTANT FORMATTING NOTES:
 - If the format requires bullet points, use proper bullet point formatting with • symbols
@@ -81,16 +89,18 @@ IMPORTANT FORMATTING NOTES:
 - Maintain any specified structural elements exactly as required
 
 Please provide ONLY the content without explanations, introductions, or annotations.
+DO NOT include the slide title or number in your response.
 `;
 
     // Add a system message for better control
     const systemPrompt = `
-You are an expert marketing content generator that creates precise, formatted content following EXACT format requirements.
+You are an expert marketing content generator that creates precise, formatted content following EXACT format requirements for presentation slides.
 - You will strictly adhere to any format requirements specified
-- You will maintain section titles, bullet points, and other structural elements exactly as required
-- You will generate content that fits the expected length
-- You will use professional marketing language appropriate for business documents
+- You will maintain bullet points, numbered lists, and other structural elements exactly as required
+- You will generate content that fits the expected length for a presentation slide
+- You will use professional marketing language appropriate for business presentations
 - You will never explain your answers or include notes/annotations - just the requested content
+- You will NOT include the slide title or slide number in your response
 `;
 
     // Generate content using OpenAI with reduced temperature for more consistent formatting

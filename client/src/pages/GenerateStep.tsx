@@ -17,9 +17,11 @@ export default function GenerateStep() {
   
   const [isGenerating, setIsGenerating] = useState(false);
   interface GeneratedSection {
-    sectionId: string;
-    sectionTitle: string;
-    content: string;
+    slideNumber: number;  
+    slideTitle: string; 
+    content: string;  
+    format: string;   
+    needsContent: boolean;
   }
   
   const [generatedContent, setGeneratedContent] = useState<GeneratedSection[]>([]);
@@ -58,7 +60,8 @@ export default function GenerateStep() {
   useEffect(() => {
     // Set first section as active tab when content is loaded
     if (generatedContent.length > 0 && !activeTab) {
-      setActiveTab(generatedContent[0].sectionId);
+      // Use slideNumber as the unique identifier for tabs
+      setActiveTab(generatedContent[0].slideNumber.toString());
     }
   }, [generatedContent]);
   
@@ -165,13 +168,13 @@ export default function GenerateStep() {
   
   const copyAllContent = () => {
     const allContent = generatedContent.map(section => {
-      return `## ${section.sectionTitle}\n\n${section.content}\n\n`;
+      return `## Slide ${section.slideNumber}: ${section.slideTitle}\n\n${section.content}\n\n`;
     }).join('---\n\n');
     
     navigator.clipboard.writeText(allContent).then(() => {
       toast({
         title: "All content copied",
-        description: "All sections have been copied to clipboard with section headings"
+        description: "All slides have been copied to clipboard with slide numbers and titles"
       });
     });
   };
@@ -270,32 +273,38 @@ export default function GenerateStep() {
               
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <div className="border-b border-gray-200 mb-6">
-                  <h4 className="text-sm font-medium text-gray-500 mb-2">Template Sections:</h4>
+                  <h4 className="text-sm font-medium text-gray-500 mb-2">Template Slides:</h4>
                   <TabsList className="mb-4 h-auto flex-wrap gap-1 bg-transparent p-0">
                     {generatedContent.map((section, index) => (
                       <TabsTrigger 
-                        key={section.sectionId} 
-                        value={section.sectionId} 
+                        key={section.slideNumber} 
+                        value={section.slideNumber.toString()} 
                         className="px-4 py-2 rounded-full data-[state=active]:bg-primary data-[state=active]:text-white shadow-none mr-2 mb-2 text-sm"
                       >
                         <span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center mr-2 text-xs">
-                          {index + 1}
+                          {section.slideNumber}
                         </span>
-                        {section.sectionTitle}
+                        {section.slideTitle}
                       </TabsTrigger>
                     ))}
                   </TabsList>
                 </div>
                 
                 {generatedContent.map((section) => (
-                  <TabsContent key={section.sectionId} value={section.sectionId}>
+                  <TabsContent key={section.slideNumber} value={section.slideNumber.toString()}>
                     <div className="p-6 border border-gray-200 rounded-md bg-white shadow-sm">
                       <div className="flex justify-between items-center mb-4 pb-3 border-b border-gray-100">
-                        <h4 className="text-lg font-medium text-gray-800">{section.sectionTitle}</h4>
+                        <h4 className="text-lg font-medium text-gray-800">
+                          <span className="text-gray-500 mr-2">Slide {section.slideNumber}:</span>
+                          {section.slideTitle}
+                          <span className="ml-3 text-xs px-2 py-1 bg-gray-100 rounded-full text-gray-600">
+                            {section.format}
+                          </span>
+                        </h4>
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => copyContentToClipboard(section.content, section.sectionTitle)}
+                          onClick={() => copyContentToClipboard(section.content, section.slideTitle)}
                           className="flex items-center gap-1.5 font-medium hover:bg-primary/5"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
