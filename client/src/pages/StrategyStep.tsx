@@ -22,13 +22,23 @@ export default function StrategyStep() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [strategyDocuments, setStrategyDocuments] = useState<File[]>([]);
   
+  // Add debugging for troubleshooting
+  console.log("Current store state:", { 
+    templateExists: !!template, 
+    companyExists: !!company,
+    templateDetails: template ? `ID: ${template.id}` : 'none',
+    companyDetails: company ? `ID: ${company.id}` : 'none'
+  });
+  
   // If no template or company, redirect to appropriate step
   if (!template) {
+    console.log("No template found, redirecting to template page");
     navigate("/template");
     return null;
   }
   
   if (!company) {
+    console.log("No company found, redirecting to company-info page");
     navigate("/company-info");
     return null;
   }

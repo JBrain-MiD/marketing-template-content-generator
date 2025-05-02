@@ -107,7 +107,8 @@ export default function CompanyInfoStep() {
               const result = JSON.parse(xhr.responseText);
               console.log("Company info submission succeeded:", result);
               
-              // Save company info to store
+              // Save company info to store - wrap in setTimeout to ensure store is updated
+              // before navigation to avoid race conditions
               setCompany(result);
               
               toast({
@@ -115,8 +116,11 @@ export default function CompanyInfoStep() {
                 description: "Your company profile has been created successfully"
               });
               
-              // Navigate to strategy step
-              navigate("/strategy");
+              // Use a slight delay before navigation to ensure store updates are processed
+              setTimeout(() => {
+                console.log("Navigating to strategy page with company:", result);
+                navigate("/strategy");
+              }, 100);
               
               resolve(result);
             } catch (error) {
