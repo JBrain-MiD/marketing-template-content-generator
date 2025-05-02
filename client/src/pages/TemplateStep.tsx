@@ -43,28 +43,73 @@ export default function TemplateStep() {
     try {
       setIsUploading(true);
       
+      // Create a new FormData instance
       const formData = new FormData();
+      
+      // Append the file with the correct field name
       formData.append("templateFile", file);
       
       // Debug FormData
       console.log("FormData created with file:", file.name);
       
-      // For FormData, we need to use fetch directly instead of apiRequest
-      console.log("Submitting to /api/templates/upload");
-      const response = await fetch("/api/templates/upload", {
-        method: "POST",
-        body: formData,
-        // Don't set Content-Type header - browser will set it with boundary parameter
-      });
-      
-      const result = await response.json();
-      
-      setTemplateAnalysis(result);
-      setTemplate(result);
-      
-      toast({
-        title: "Template uploaded successfully",
-        description: `${result.sections.length} sections detected`
+      // Use XMLHttpRequest for more direct control and debugging
+      return new Promise<any>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        
+        xhr.open("POST", "/api/templates/upload", true);
+        
+        xhr.onload = function() {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const result = JSON.parse(xhr.responseText);
+              console.log("Upload succeeded:", result);
+              
+              // Update state with result
+              setTemplateAnalysis(result);
+              setTemplate(result);
+              
+              toast({
+                title: "Template uploaded successfully",
+                description: `${result.sections.length} sections detected`
+              });
+              
+              resolve(result);
+            } catch (error) {
+              console.error("Error parsing response:", error);
+              reject(error);
+            }
+          } else {
+            console.error("Upload failed with status:", xhr.status);
+            toast({
+              title: "Upload failed",
+              description: `Server returned status: ${xhr.status}`,
+              variant: "destructive"
+            });
+            reject(new Error(`Server returned status: ${xhr.status}`));
+          }
+          setIsUploading(false);
+        };
+        
+        xhr.onerror = function() {
+          console.error("XHR error occurred");
+          toast({
+            title: "Upload failed",
+            description: "Network error occurred",
+            variant: "destructive"
+          });
+          setIsUploading(false);
+          reject(new Error("Network error"));
+        };
+        
+        xhr.upload.onprogress = function(e) {
+          if (e.lengthComputable) {
+            const percentComplete = Math.round((e.loaded / e.total) * 100);
+            console.log(`Upload progress: ${percentComplete}%`);
+          }
+        };
+        
+        console.log("Sending XHR request to /api/templates/upload");
+        xhr.send(formData);
       });
     } catch (error) {
       console.error("Template upload error:", error);
