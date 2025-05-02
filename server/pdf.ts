@@ -1,5 +1,6 @@
 import { TemplateSection } from '@shared/schema';
 import OpenAI from 'openai';
+import { PDFDocument } from 'pdf-lib';
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
 // Ensure we have a valid API key
@@ -17,57 +18,107 @@ type TemplateAnalysisResult = {
   rawText: string;
 };
 
-// An implementation that uses both text extraction and AI analysis for better slide detection
+// Basic PDF text extraction using pdf-lib and buffer analysis
+async function extractBasicPDFInfo(buffer: Buffer): Promise<{ numPages: number }> {
+  try {
+    console.log("Using PDF-lib to get basic PDF information...");
+    
+    // Get basic PDF info using PDF-lib
+    const pdfDoc = await PDFDocument.load(buffer);
+    const numPages = pdfDoc.getPageCount();
+    
+    console.log(`PDF loaded with ${numPages} pages`);
+    
+    return { numPages };
+  } catch (error) {
+    console.error("Error in PDF-lib extraction:", error);
+    // Return a default value if we can't get the page count
+    return { numPages: Math.ceil(buffer.length / 50000) || 1 };
+  }
+}
+
+// Improved PDF text extraction approach using multiple methods
 export async function analyzeTemplate(buffer: Buffer): Promise<TemplateAnalysisResult> {
   try {
     console.log("Starting to analyze PDF template...");
     
-    // Since pdf-parse is causing issues, we'll use a robust fallback approach
-    // that works with the buffer data directly to extract approximate content
+    // Get basic PDF info like page count
+    const { numPages } = await extractBasicPDFInfo(buffer);
     
-    // For safety, we'll determine page count from buffer size
-    // This isn't exact but helps provide structure to our analysis
-    const estimatedPageCount = Math.max(1, Math.floor(buffer.length / 40000)); 
-    console.log(`Estimated ${estimatedPageCount} pages from buffer size.`);
-    
-    // Convert buffer to string for basic text extraction
-    // Look for standard PDF markers and text blocks
+    // Extract text using a simple but effective pattern-matching approach
+    // Most PDF text is stored in patterns like (text) or ((text))
     const bufferStr = buffer.toString('utf-8', 0, Math.min(buffer.length, 1000000));
     
-    // Extract potential text content (this is imperfect but functional)
-    let extractedText = "";
+    // Method 1: Try to extract text enclosed in PDF text markers
+    const textRegex = /\(([^()]+)\)|\(\(([^()]+)\)\)/g;
+    const textMatches = [];
+    let match;
     
-    // Try to find text by looking for patterns in the PDF content
-    const textMatches = bufferStr.match(/\(\(([^)]+)\)\)|(\w[\w\s,.!?:;'"()-]{3,})/g);
-    if (textMatches && textMatches.length > 0) {
-      extractedText = textMatches.join('\n')
-        .replace(/\\\(/g, '(')
-        .replace(/\\\)/g, ')')
-        .replace(/\\n/g, '\n');
-    } else {
-      // If no matches found, use a slice of the buffer as fallback text
-      extractedText = bufferStr
-        .replace(/[^\x20-\x7E\r\n]/g, '') // Replace non-printable characters
-        .split(/\s{3,}/).join('\n'); // Try to detect paragraph breaks
+    while ((match = textRegex.exec(bufferStr)) !== null) {
+      const text = match[1] || match[2];
+      if (text && text.trim().length > 2) {
+        textMatches.push(text.trim());
+      }
     }
     
-    // Get the number of pages
-    const numPages = estimatedPageCount;
+    // Method 2: Look for standard alphanumeric text patterns
+    const wordRegex = /\b([A-Za-z][A-Za-z0-9\s.,!?;:&'"()-]{3,})\b/g;
+    const wordMatches = [];
+    let wordMatch;
     
-    // Get processed raw text
-    const rawText = extractedText || "Failed to extract meaningful text from PDF.";
+    while ((wordMatch = wordRegex.exec(bufferStr)) !== null) {
+      if (wordMatch[1] && wordMatch[1].trim().length > 3) {
+        wordMatches.push(wordMatch[1].trim());
+      }
+    }
     
-    console.log(`Extracted approximately ${rawText.length} characters of text.`);
+    // Combine and clean up extracted text
+    let extractedText = "";
     
-    // Debug: Log a sample of the extracted text (put more in the logs for analysis)
+    if (textMatches.length > 50) {
+      // If we found a lot of text using the PDF text marker pattern, use that
+      extractedText = textMatches.join(' ')
+        .replace(/\\n/g, '\n')
+        .replace(/\\\(/g, '(')
+        .replace(/\\\)/g, ')')
+        .replace(/\s{2,}/g, ' ');
+    } else if (wordMatches.length > 100) {
+      // If we found a lot of words using the word pattern, use that
+      extractedText = wordMatches.join(' ')
+        .replace(/\s{2,}/g, ' ');
+    } else {
+      // Fallback to a more lenient approach
+      extractedText = bufferStr
+        .replace(/[^\x20-\x7E\r\n]/g, '') // Remove non-printable characters
+        .replace(/\s{3,}/g, '\n'); // Replace large whitespace with newlines
+    }
+    
+    console.log(`Extracted approximately ${extractedText.length} characters of text.`);
+    
+    // Try to add page markers to make analysis easier
+    let enhancedText = "";
+    const avgCharsPerPage = Math.ceil(extractedText.length / numPages);
+    
+    for (let i = 0; i < numPages; i++) {
+      const startChar = i * avgCharsPerPage;
+      const endChar = Math.min(startChar + avgCharsPerPage, extractedText.length);
+      const pageText = extractedText.substring(startChar, endChar);
+      
+      enhancedText += `--- PAGE ${i+1} ---\n${pageText}\n\n`;
+    }
+    
+    // Use the enhanced text with page markers
+    const rawText = enhancedText || extractedText;
+    
+    // Debug: Log a sample of the extracted text
     console.log(`TEXT SAMPLE ===>\n${rawText.substring(0, 3000)}\n<===END TEXT SAMPLE`);
     
-    // Split text into logical pages/slides
-    const pages = splitIntoPages(rawText);
+    // Split text into logical pages
+    const pages = rawText.split(/---\s*PAGE\s*\d+\s*---/).filter(page => page.trim().length > 0);
     
     console.log(`Split content into ${pages.length} logical pages for analysis.`);
     
-    // Instead of using our limited text parsing, use OpenAI to identify slides
+    // Let OpenAI analyze the slides
     const sections = await analyzeSlides(rawText, pages);
     
     console.log(`Identified ${sections.length} sections in the template.`);
