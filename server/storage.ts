@@ -113,23 +113,36 @@ export class DatabaseStorage implements IStorage {
     // Handle the complex types with proper casting
     let documentsArray: CompanyDocument[] | null = null;
     
-    // Make sure documents is properly typed as an array if it exists
+    // Make sure documents is properly typed as an array if it exists, and sanitize content
     if (insertCompany.documents && Array.isArray(insertCompany.documents)) {
-      documentsArray = insertCompany.documents.map((doc: any) => ({
-        id: doc.id,
-        name: doc.name,
-        size: doc.size,
-        content: doc.content
-      }));
+      documentsArray = insertCompany.documents.map((doc: any) => {
+        // Ensure content is safe for database storage
+        let safeContent = "";
+        if (doc.content) {
+          // Remove any potential problematic characters
+          safeContent = doc.content
+            .replace(/[^\x20-\x7E\r\n]/g, ' ') // Replace non-printable chars
+            .replace(/\u0000/g, ' ')           // Replace null bytes
+            .substring(0, 5000);               // Limit length for safety
+        }
+        
+        return {
+          id: doc.id,
+          name: doc.name,
+          size: doc.size,
+          content: safeContent
+        };
+      });
     }
     
+    // Apply additional safety by limiting field lengths
     const [result] = await db.insert(companies)
       .values({
-        name: insertCompany.name,
-        website: insertCompany.website || null,
-        linkedin: insertCompany.linkedin || null,
-        industry: insertCompany.industry || null,
-        additionalNotes: insertCompany.additionalNotes || null,
+        name: (insertCompany.name || "").substring(0, 255),
+        website: insertCompany.website ? insertCompany.website.substring(0, 255) : null,
+        linkedin: insertCompany.linkedin ? insertCompany.linkedin.substring(0, 255) : null,
+        industry: insertCompany.industry ? insertCompany.industry.substring(0, 255) : null,
+        additionalNotes: insertCompany.additionalNotes ? insertCompany.additionalNotes.substring(0, 1000) : null,
         documents: documentsArray as any
       })
       .returning();
@@ -156,8 +169,17 @@ export class DatabaseStorage implements IStorage {
   }
   
   async updateProjectContent(id: number, content: GeneratedContent[]): Promise<Project> {
+    // Sanitize the generated content to prevent any issues with special characters
+    const sanitizedContent = content.map(section => ({
+      slideNumber: section.slideNumber,
+      slideTitle: section.slideTitle ? section.slideTitle.replace(/[^\x20-\x7E\r\n]/g, ' ').substring(0, 255) : '',
+      content: section.content ? section.content.replace(/[^\x20-\x7E\r\n]/g, ' ').substring(0, 5000) : '',
+      format: section.format ? section.format.substring(0, 50) : 'Text',
+      needsContent: !!section.needsContent
+    }));
+    
     const [result] = await db.update(projects)
-      .set({ generatedContent: content })
+      .set({ generatedContent: sanitizedContent as any })
       .where(eq(projects.id, id))
       .returning();
     

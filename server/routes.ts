@@ -157,20 +157,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Extract content from document for later use
             let content = "";
-            if (file.mimetype === "application/pdf") {
-              const result = await analyzeTemplate(file.buffer);
-              content = result.rawText;
-            } else {
-              // For text files or other formats
-              content = file.buffer.toString("utf-8");
+            try {
+              if (file.mimetype === "application/pdf") {
+                // For PDF files, use our enhanced extraction with safety checks
+                const result = await analyzeTemplate(file.buffer);
+                // Sanitize content to prevent database issues - remove non-printable chars
+                content = result.rawText.substring(0, 20000)
+                  .replace(/[^\x20-\x7E\r\n]/g, ' ')
+                  .replace(/\u0000/g, ' '); // Specifically target null bytes
+              } else {
+                // For text files or other formats
+                // Convert buffer to string and sanitize, limiting length to prevent issues
+                const rawContent = file.buffer.toString('utf8', 0, Math.min(file.buffer.length, 10000));
+                content = rawContent
+                  .replace(/[^\x20-\x7E\r\n]/g, ' ')
+                  .replace(/\u0000/g, ' ');
+              }
+              
+              // Final verification to ensure content is safe for database
+              content = content.trim().substring(0, 5000); // Limit length as a safeguard
+              
+              documents.push({
+                id: documentId,
+                name: file.originalname,
+                size: file.size,
+                content
+              });
+            } catch (contentError) {
+              console.error(`Error extracting content from document ${file.originalname}:`, contentError);
+              // Still add the document but with a safe placeholder content
+              documents.push({
+                id: documentId,
+                name: file.originalname,
+                size: file.size,
+                content: "Document content could not be extracted safely."
+              });
             }
-            
-            documents.push({
-              id: documentId,
-              name: file.originalname,
-              size: file.size,
-              content
-            });
           }
         } else {
           console.log("No documents uploaded");
