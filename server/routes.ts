@@ -1,4 +1,4 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
@@ -16,6 +16,10 @@ import {
   GeneratedContent
 } from "@shared/schema";
 import { z } from "zod";
+
+// TypeScript interfaces for multer
+// We'll use type assertion instead of interface extension to avoid TypeScript errors
+// The actual Express.Request type will be augmented by multer middleware at runtime
 
 // Set up multer for memory storage
 const upload = multer({ 
@@ -35,11 +39,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes
   
   // Template routes
-  app.post("/api/templates/upload", upload.single("templateFile"), async (req, res) => {
+  app.post("/api/templates/upload", (req, res, next) => {
+    console.log("Received template upload request");
+    console.log("Content-Type:", req.headers['content-type']);
+    console.log("Request body type:", typeof req.body);
+    next();
+  }, upload.single("templateFile"), async (req, res) => {
     try {
+      console.log("Multer middleware processed the request");
+      console.log("File present:", !!req.file);
+      
       if (!req.file) {
+        console.log("No file found in the request");
         return res.status(400).json({ message: "No template file uploaded" });
       }
+      
+      console.log("File details:", {
+        fieldname: req.file.fieldname,
+        originalname: req.file.originalname,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
+        buffer: req.file.buffer ? "Buffer present" : "No buffer"
+      });
       
       // Convert the uploaded file to FileInfo
       const fileInfo: FileInfo = {
@@ -115,7 +136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let content = "";
           if (file.mimetype === "application/pdf") {
             const result = await analyzeTemplate(file.buffer);
-            content = result.rawText || "";
+            content = result.rawText;
           } else {
             // For text files or other formats
             content = file.buffer.toString("utf-8");
@@ -231,7 +252,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const content = await generateContent({
           section,
           company,
-          strategy: project.strategy
+          strategy: project.strategy || ""
         });
         
         generatedContent.push({

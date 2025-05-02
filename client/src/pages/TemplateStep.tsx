@@ -22,6 +22,7 @@ export default function TemplateStep() {
     if (files.length === 0) return;
     
     const file = files[0]; // Only accept one template file
+    console.log("Received file:", file.name, "Type:", file.type, "Size:", file.size);
     
     // Check file type
     const validPdfTypes = ["application/pdf"];
@@ -45,9 +46,15 @@ export default function TemplateStep() {
       const formData = new FormData();
       formData.append("templateFile", file);
       
-      const response = await apiRequest("POST", "/api/templates/upload", null, {
+      // Debug FormData
+      console.log("FormData created with file:", file.name);
+      
+      // For FormData, we need to use fetch directly instead of apiRequest
+      console.log("Submitting to /api/templates/upload");
+      const response = await fetch("/api/templates/upload", {
+        method: "POST",
         body: formData,
-        headers: {}, // Remove Content-Type header for FormData
+        // Don't set Content-Type header - browser will set it with boundary parameter
       });
       
       const result = await response.json();
