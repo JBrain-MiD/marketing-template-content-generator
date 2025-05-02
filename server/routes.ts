@@ -284,13 +284,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate content for each template section
       const generatedContent: GeneratedContent[] = [];
       
+      // Generate content for each section in the template
       for (const section of template.sections) {
+        // Log the full section structure for debugging
+        console.log(`Generating content for section: ${section.title}, format: ${section.format}, needs content: ${section.needsContent}`);
+        
+        // Only generate content if the slide needs it
         const content = await generateContent({
           section,
           company,
           strategy: project.strategy || ""
         });
         
+        // Include all the necessary information in the generated content
         generatedContent.push({
           slideNumber: section.slideNumber,
           slideTitle: section.title,
@@ -303,7 +309,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update project with generated content
       const updatedProject = await storage.updateProjectContent(id, generatedContent);
       
-      res.json(updatedProject);
+      // Return both the updated project and the original template sections for reference
+      res.json({
+        ...updatedProject,
+        templateSections: template.sections
+      });
     } catch (error: any) {
       console.error("Content generation error:", error);
       res.status(500).json({ message: error.message || "Failed to generate content" });

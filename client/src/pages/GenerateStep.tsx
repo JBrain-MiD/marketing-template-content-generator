@@ -32,6 +32,7 @@ export default function GenerateStep() {
   }
   
   const [generatedContent, setGeneratedContent] = useState<GeneratedSection[]>([]);
+  const [templateSections, setTemplateSections] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<string>("");
   
   // Add debugging for troubleshooting
@@ -89,11 +90,13 @@ export default function GenerateStep() {
               const result = JSON.parse(xhr.responseText);
               console.log("Content generation succeeded:", result);
               
+              // Store both the generated content and the original template sections
               setGeneratedContent(result.generatedContent || []);
+              setTemplateSections(result.templateSections || template.sections || []);
               
               toast({
                 title: "Content generated",
-                description: `Generated content for ${result.generatedContent?.length || 0} sections`
+                description: `Generated content for ${result.generatedContent?.length || 0} slides`
               });
               
               resolve();
@@ -321,6 +324,72 @@ export default function GenerateStep() {
                         </Button>
                       </div>
                       
+                      <Accordion type="single" collapsible className="w-full mt-4 mb-4">
+                        <AccordionItem value="slide-analysis" className="border border-gray-200 rounded-md overflow-hidden">
+                          <AccordionTrigger className="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-sm text-gray-700">
+                            <div className="flex items-center">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              View Slide Analysis
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="px-4 py-3 bg-white border-t border-gray-200">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <h6 className="text-xs font-semibold text-gray-500 mb-1">Format:</h6>
+                                <p className="text-sm text-gray-700">{section.format}</p>
+                              </div>
+                              <div>
+                                <h6 className="text-xs font-semibold text-gray-500 mb-1">Needs Content:</h6>
+                                <p className="text-sm text-gray-700">
+                                  {section.needsContent ? 
+                                    <Badge variant="default" className="text-xs">Yes</Badge> : 
+                                    <Badge variant="secondary" className="text-xs">No</Badge>
+                                  }
+                                </p>
+                              </div>
+                            </div>
+                            
+                            {/* Try to find the matching section in templateSections first,
+                              then fall back to template.sections if needed */}
+                            {(() => {
+                              // First try to find matching section in templateSections by slideNumber
+                              const templateSection = 
+                                templateSections.find(ts => ts.slideNumber === section.slideNumber) ||
+                                (template.sections && template.sections.length > 0 ? 
+                                  template.sections[section.slideNumber-1] : null);
+                              
+                              if (templateSection) {
+                                return (
+                                  <>
+                                    <div className="border-t border-gray-100 mt-3 pt-3">
+                                      <h6 className="text-xs font-semibold text-gray-500 mb-1">Purpose:</h6>
+                                      <p className="text-sm text-gray-700">{templateSection.purpose || "Not specified"}</p>
+                                    </div>
+                                    
+                                    {templateSection.formatDetails && (
+                                      <div className="mt-3">
+                                        <h6 className="text-xs font-semibold text-gray-500 mb-1">Format Details:</h6>
+                                        <p className="text-sm text-gray-700">{templateSection.formatDetails}</p>
+                                      </div>
+                                    )}
+                                    
+                                    {templateSection.expectedLength && (
+                                      <div className="mt-3">
+                                        <h6 className="text-xs font-semibold text-gray-500 mb-1">Expected Length:</h6>
+                                        <p className="text-sm text-gray-700">{templateSection.expectedLength}</p>
+                                      </div>
+                                    )}
+                                  </>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
+
                       <div className="whitespace-pre-wrap text-gray-700 text-base leading-relaxed bg-gray-50 p-5 rounded-md font-normal max-h-[400px] overflow-y-auto">
                         {section.content}
                       </div>
