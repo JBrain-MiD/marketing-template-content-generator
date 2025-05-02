@@ -39,6 +39,7 @@ export type Company = typeof companies.$inferSelect;
 // Project data structure
 export const projects = pgTable("projects", {
   id: serial("id").primaryKey(),
+  // Foreign keys for references, but without using relations
   templateId: integer("template_id").notNull(),
   companyId: integer("company_id").notNull(),
   strategy: text("strategy"),
