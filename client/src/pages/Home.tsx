@@ -15,7 +15,7 @@ export default function Home() {
   return (
     <div className="container mx-auto px-4 py-12 max-w-5xl">
       <div className="text-center mb-10">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">Marketing Template Generator</h1>
+        <h1 className="text-4xl font-bold text-gray-900 mb-4">Marketing Plan Content Generator</h1>
         <p className="text-xl text-gray-600 max-w-3xl mx-auto">
           Create professional marketing content tailored to your template, company, and strategy in minutes.
         </p>
