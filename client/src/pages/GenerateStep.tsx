@@ -68,8 +68,9 @@ export default function GenerateStep() {
   useEffect(() => {
     // Set first section as active tab when content is loaded
     if (generatedContent.length > 0 && !activeTab) {
-      // Use slideNumber as the unique identifier for tabs
-      setActiveTab(generatedContent[0].slideNumber.toString());
+      // Use slideNumber as the unique identifier for tabs, with fallback to 1
+      const slideNumber = generatedContent[0].slideNumber || 1;
+      setActiveTab(slideNumber.toString());
     }
   }, [generatedContent]);
   
@@ -177,8 +178,9 @@ export default function GenerateStep() {
   };
   
   const copyAllContent = () => {
-    const allContent = generatedContent.map(section => {
-      return `## Slide ${section.slideNumber}: ${section.slideTitle}\n\n${section.content}\n\n`;
+    const allContent = generatedContent.map((section, index) => {
+      const slideNumber = section.slideNumber || index + 1;
+      return `## Slide ${slideNumber}: ${section.slideTitle}\n\n${section.content}\n\n`;
     }).join('---\n\n');
     
     navigator.clipboard.writeText(allContent).then(() => {
@@ -292,7 +294,7 @@ export default function GenerateStep() {
                         className="px-4 py-2 rounded-full data-[state=active]:bg-primary data-[state=active]:text-white shadow-none mr-2 mb-2 text-sm"
                       >
                         <span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center mr-2 text-xs">
-                          {section.slideNumber}
+                          {section.slideNumber || index + 1}
                         </span>
                         {section.slideTitle}
                       </TabsTrigger>
