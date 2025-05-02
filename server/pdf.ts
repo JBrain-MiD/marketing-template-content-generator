@@ -90,62 +90,70 @@ async function analyzeSlides(rawText: string, pages: string[]): Promise<Template
     
     // First, send the raw text to OpenAI to identify slide titles and structure
     const prompt = `
-You are an expert presentation analyzer. I have a marketing presentation template in PDF format that has been converted to text. 
-Your task is to identify and analyze EVERY INDIVIDUAL SLIDE in this presentation. This is critical for accurate content generation later.
+You are an expert marketing presentation analyzer working with a PDF template that has been converted to text.
+Your task is to identify AT LEAST 15-20 DISTINCT SLIDES from this template. You MUST err on the side of over-identification rather than under-identification.
 
 Here's the extracted text from the PDF (it may be incomplete or messy due to PDF conversion):
 \`\`\`
-${rawText.substring(0, 15000)} // Limited sample to avoid token limits
+${rawText.substring(0, 25000)} // Increased sample size for better analysis
 \`\`\`
 
-IMPORTANT: A marketing presentation typically has 15-40 slides. Your goal is to identify as many slides as possible, not just section headers.
+CRITICAL INSTRUCTION: This is a marketing presentation with many slides. Assume that EVERY PAGE represents at least one slide. You MUST identify a minimum of 15 slides even if the headers aren't obvious.
 
-Look for patterns indicating slide transitions such as:
-- Numbered segments (Slide 1, Slide 2)
-- Heading formats that repeat throughout the document
-- Navigation markers or footer text that changes between slides
-- Content transitions that indicate new slides
-- Slide titles/headers that appear to be in a consistent format
-- Page numbers or slide numbers if present
+Use these methods to identify slides:
+1. Look for explicit slide titles/headings/headers
+2. Look for numbered sections (1., 2., etc.)
+3. Look for transition phrases ("Next, we'll discuss...")
+4. Look for topic shifts (moving from strategy to budget, etc.)
+5. Look for formatting patterns that repeat throughout the document
+6. ASSUME that each major marketing concept usually gets its own slide
+7. ASSUME that if you see a list of topics, each topic will have its own slide later
+8. ASSUME typical marketing presentation slide structure:
+   - Title/intro slides 
+   - Problem/challenge slides 
+   - Company/solution slides 
+   - Strategy slides 
+   - Implementation/tactics slides 
+   - Budget/timeline slides
+   - Results/KPI slides 
+   - Conclusion slides
 
-For each INDIVIDUAL SLIDE you identify, provide:
-
-1. Slide number: Numeric order in the presentation (1, 2, 3, etc.)
-2. Slide title: The main heading or title of this specific slide
-3. Format: The primary content format needed (Paragraph, Bullet Points, Numbered List, Table, Chart, Image with Caption, etc.)
-4. Format details: Specific formatting requirements (e.g., "3 bullet points with supporting text", "2 columns comparing pros/cons", "percentages to fill in")
+For EACH slide you identify, provide:
+1. Slide number: Sequential order (1, 2, 3...)
+2. Title: SPECIFIC slide title - if unsure, provide a descriptive marketing title, NOT a generic placeholder
+3. Format: Primary content format (Paragraph, Bullet Points, Numbered List, Table, Chart, Image with Caption, etc.)
+4. Format details: Detailed requirements for this slide's format
 5. Expected length: Word count range (Short: 30-50 words, Medium: 50-100 words, Long: 100-200 words)
-6. Purpose: What this specific slide aims to communicate within the presentation
-7. Needs custom content: Boolean (true/false) indicating if this slide needs generated content (only title slides, TOCs, or purely decorative slides should be false)
-8. Original text: Extract any important text from the slide that shows its purpose/structure (abbreviated if lengthy)
+6. Purpose: The specific communication purpose of this slide
+7. Needs content: true/false - Does this slide need AI-generated content?
+8. Original text: Brief excerpt from the text that corresponds to this slide
 
-Your output must be a valid JSON object with a single key "slides" containing an array of slide objects:
-
+RETURN VALID JSON with this structure:
 {
   "slides": [
     {
       "slideNumber": 1,
-      "title": "Title of first slide",
-      "format": "Format needed",
+      "title": "Specific slide title - NOT generic",
+      "format": "Content format",
       "formatDetails": "Detailed format requirements",
       "expectedLength": "Length estimation",
-      "purpose": "Purpose of this slide",
+      "purpose": "Specific purpose",
       "needsContent": true/false,
-      "originalText": "Sample text from slide"
+      "originalText": "Brief excerpt"
     },
-    // ... additional slides
+    // minimum of 15-20 slides total
   ]
 }
 
-BE COMPREHENSIVE - Identify and analyze as many individual slides as possible. This is crucial for the presentation's content generation.
+IF IN DOUBT, IDENTIFY MORE SLIDES RATHER THAN FEWER. Each major marketing concept deserves its own slide.
 `;
 
-    // Generate analysis using OpenAI
+    // Generate analysis using OpenAI - use more tokens for more detailed analysis
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 3000,
-      temperature: 0.7,
+      max_tokens: 4000,
+      temperature: 0.5,
       response_format: { type: "json_object" }
     });
 
@@ -154,6 +162,10 @@ BE COMPREHENSIVE - Identify and analyze as many individual slides as possible. T
     if (!content) {
       throw new Error("No response from AI analysis");
     }
+    
+    console.log("AI Analysis JSON response length:", content.length);
+    // Log a sample of the first part of the response
+    console.log("AI Analysis Sample:", content.substring(0, 500) + "...");
 
     try {
       const analysis = JSON.parse(content);
