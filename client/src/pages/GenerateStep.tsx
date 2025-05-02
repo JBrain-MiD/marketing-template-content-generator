@@ -20,7 +20,7 @@ import { useStore } from "@/lib/store";
 export default function GenerateStep() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const { template, company, project, strategy } = useStore();
+  const { template, company, project, strategy, setProject, setStrategy } = useStore();
   
   const [isGenerating, setIsGenerating] = useState(false);
   interface GeneratedSection {

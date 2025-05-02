@@ -445,58 +445,189 @@ function identifySections(pages: string[]): TemplateSection[] {
     });
   });
   
-  // If no sections were found, create default sections
-  if (sections.length === 0) {
-    // Create some default sections based on page count
-    if (pages.length === 1) {
-      // Single page template
-      sections.push({
+  // Create a minimum of 15 marketing presentation slides if analysis didn't find enough
+  if (sections.length < 10) {
+    const marketingSlides = [
+      // Title and introduction slides
+      {
         slideNumber: 1,
-        title: "Main Content",
-        format: "Paragraph",
-        formatDetails: "Standard paragraphs with potential bullet points for key information",
-        expectedLength: "Medium (50-100 words)",
-        purpose: "Provide the main content for this template.",
-        needsContent: true,
+        title: "Title Slide",
+        format: "Title and Subtitle",
+        formatDetails: "Main title with company name and presentation purpose",
+        expectedLength: "Short (10-30 words)",
+        purpose: "Introduce the presentation and establish branding",
+        needsContent: false,
         page: 1
-      });
-    } else {
-      // Multi-page template
-      sections.push({
-        slideNumber: 1,
-        title: "Executive Summary",
-        format: "Paragraph",
-        formatDetails: "Concise summary paragraphs highlighting key points",
-        expectedLength: "Medium (50-100 words)",
-        purpose: "Summarize the key points of the entire template.",
-        needsContent: true,
-        page: 1
-      });
-      
-      if (pages.length > 2) {
-        sections.push({
-          slideNumber: 2,
-          title: "Marketing Strategy",
-          format: "Bullet Points",
-          formatDetails: "List of strategic points with brief explanations",
-          expectedLength: "Medium (50-100 words)",
-          purpose: "Outline the key strategic approaches for marketing.",
-          needsContent: true,
-          page: 2
-        });
-      }
-      
-      sections.push({
-        slideNumber: pages.length,
-        title: "Conclusion",
-        format: "Paragraph",
-        formatDetails: "Brief closing paragraph summarizing key takeaways",
+      },
+      {
+        slideNumber: 2,
+        title: "Agenda",
+        format: "Bullet Points",
+        formatDetails: "5-8 bullet points listing main sections",
         expectedLength: "Short (30-50 words)",
-        purpose: "Provide a concise conclusion to the document.",
+        purpose: "Preview what will be covered in the presentation",
         needsContent: true,
-        page: pages.length
-      });
+        page: 2
+      },
+      // Company and market background slides
+      {
+        slideNumber: 3,
+        title: "Company Overview",
+        format: "Paragraph with Key Points",
+        formatDetails: "Brief company description with 2-3 key highlights",
+        expectedLength: "Medium (50-100 words)",
+        purpose: "Provide essential background on the company",
+        needsContent: true,
+        page: 3
+      },
+      {
+        slideNumber: 4,
+        title: "Market Analysis",
+        format: "Bullet Points with Data",
+        formatDetails: "5-6 bullet points with market statistics and trends",
+        expectedLength: "Medium (50-100 words)",
+        purpose: "Summarize current market situation and opportunities",
+        needsContent: true,
+        page: 4
+      },
+      {
+        slideNumber: 5,
+        title: "Target Audience",
+        format: "Table",
+        formatDetails: "Customer segments with demographics and characteristics",
+        expectedLength: "Medium (50-100 words)",
+        purpose: "Define who the marketing efforts will target",
+        needsContent: true,
+        page: 5
+      },
+      // Strategy and approach slides
+      {
+        slideNumber: 6,
+        title: "Marketing Objectives",
+        format: "Numbered List",
+        formatDetails: "3-5 numbered specific, measurable objectives",
+        expectedLength: "Medium (50-100 words)",
+        purpose: "Set clear goals for the marketing campaign",
+        needsContent: true,
+        page: 6
+      },
+      {
+        slideNumber: 7,
+        title: "Value Proposition",
+        format: "Paragraph",
+        formatDetails: "Clear statement of unique selling proposition",
+        expectedLength: "Medium (50-100 words)",
+        purpose: "Articulate why customers should choose this product/service",
+        needsContent: true,
+        page: 7
+      },
+      {
+        slideNumber: 8,
+        title: "Marketing Strategy Overview",
+        format: "Bullet Points",
+        formatDetails: "4-6 bullet points outlining the core strategy",
+        expectedLength: "Medium (50-100 words)",
+        purpose: "Provide high-level marketing approach",
+        needsContent: true,
+        page: 8
+      },
+      // Tactical execution slides
+      {
+        slideNumber: 9,
+        title: "Channel Strategy",
+        format: "Table with Bullet Points",
+        formatDetails: "Marketing channels with objectives for each",
+        expectedLength: "Medium (70-120 words)",
+        purpose: "Detail which channels will be used and why",
+        needsContent: true,
+        page: 9
+      },
+      {
+        slideNumber: 10,
+        title: "Content Strategy",
+        format: "Bullet Points with Examples",
+        formatDetails: "Content types with brief description of each",
+        expectedLength: "Medium (50-100 words)",
+        purpose: "Explain what content will be created to support marketing goals",
+        needsContent: true,
+        page: 10
+      },
+      {
+        slideNumber: 11,
+        title: "Campaign Timeline",
+        format: "Table",
+        formatDetails: "Monthly breakdown of key activities and milestones",
+        expectedLength: "Medium (60-120 words)",
+        purpose: "Show the sequence and timing of marketing activities",
+        needsContent: true,
+        page: 11
+      },
+      {
+        slideNumber: 12,
+        title: "Budget Allocation",
+        format: "Table with Percentages",
+        formatDetails: "Budget breakdown by channel and activity",
+        expectedLength: "Medium (50-80 words)",
+        purpose: "Show how marketing budget will be distributed",
+        needsContent: true,
+        page: 12
+      },
+      // Results and measurement slides
+      {
+        slideNumber: 13,
+        title: "Key Performance Indicators",
+        format: "Bullet Points with Metrics",
+        formatDetails: "5-7 KPIs with target values",
+        expectedLength: "Medium (50-100 words)",
+        purpose: "Define how success will be measured",
+        needsContent: true,
+        page: 13
+      },
+      {
+        slideNumber: 14,
+        title: "Reporting Framework",
+        format: "Bullet Points",
+        formatDetails: "Reporting frequency and key metrics to track",
+        expectedLength: "Medium (50-100 words)",
+        purpose: "Establish how progress will be monitored",
+        needsContent: true,
+        page: 14
+      },
+      // Closing slides
+      {
+        slideNumber: 15,
+        title: "Next Steps",
+        format: "Numbered List",
+        formatDetails: "3-5 specific action items with owners",
+        expectedLength: "Medium (50-100 words)",
+        purpose: "Define immediate actions needed to implement the plan",
+        needsContent: true,
+        page: 15
+      },
+      {
+        slideNumber: 16,
+        title: "Questions & Discussion",
+        format: "Title Only",
+        formatDetails: "Simple title slide to prompt discussion",
+        expectedLength: "Very Short (5-10 words)",
+        purpose: "Transition to Q&A or discussion portion",
+        needsContent: false,
+        page: 16
+      },
+    ];
+    
+    // If we had some sections but not enough, combine them with our default set
+    if (sections.length > 0) {
+      // Use existing sections first, then add defaults for the remaining slides
+      const existingSlideNumbers = sections.map(s => s.slideNumber);
+      const additionalSlides = marketingSlides.filter(s => !existingSlideNumbers.includes(s.slideNumber));
+      
+      // Only add enough slides to reach 15-16 total slides
+      const slidesToAdd = additionalSlides.slice(0, Math.max(15 - sections.length, 0));
+      return [...sections, ...slidesToAdd];
     }
+    
+    return marketingSlides;
   }
   
   return sections;
