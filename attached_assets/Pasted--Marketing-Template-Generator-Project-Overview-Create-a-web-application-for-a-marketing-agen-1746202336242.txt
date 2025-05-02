@@ -1,0 +1,68 @@
+# Marketing Template Generator
+
+## Project Overview
+Create a web application for a marketing agency that automates the process of generating content for marketing deliverables. The application allows users to upload template PDFs and company documentation, input strategy details, and receive AI-generated content tailored to each slide in the template.
+
+## Technical Requirements
+- Frontend: HTML, CSS, and JavaScript with a clean, modern UI
+- Backend: Node.js with Express
+- PDF Processing: PDF parsing library for template and document analysis
+- AI Integration: OpenAI API for content generation
+- File Handling: Support for PDF uploads and processing
+- Responsive Design: Mobile-friendly interface
+
+## Core Features
+
+### 1. Template Analysis
+- Allow users to upload marketing template PDFs
+- Extract and analyze template structure, identifying:
+  - Slide titles and purposes
+  - Content format requirements (paragraphs, bullets, etc.)
+  - Content length expectations
+  - Create a markup template that can be used consistently
+
+### 2. Company Information Collection
+- Support for multiple company document uploads
+- Input fields for website URL, LinkedIn URL, and additional notes
+- Combine all information into a comprehensive company profile
+
+### 3. Strategy Definition
+- Text input for detailed marketing strategy description
+- Optional strategy document uploads
+- Integration of strategy with company information
+
+### 4. AI-Powered Content Generation
+- Utilize OpenAI's API to generate tailored content for each slide
+- Content matches the template format requirements
+- Content integrates company information and strategy details
+- Results presented in a clear, copyable format
+
+### 5. User Interface
+- Multi-step process with progress indicator
+- Clean, purple-themed design inspired by marketersindemand.com
+- Intuitive file upload with drag-and-drop support
+- Responsive layout that works on different devices
+
+## Application Flow
+1. User uploads template PDF → System analyzes structure
+2. User uploads company documents and enters additional info
+3. User defines marketing strategy
+4. System generates content based on all inputs
+5. User reviews and can copy/download generated content
+
+## Technical Architecture
+- Server-side processing for PDF analysis and OpenAI integration
+- Client-side interface with modular JavaScript
+- Temporary file storage for processing
+- No authentication required (internal tool with link-only access)
+
+## Design Specifications
+- Primary Color: Purple (#5a287d), inspired by marketersindemand.com
+- Clean, minimalist interface
+- Progress steps clearly indicated
+- Responsive design that works on desktop and tablet
+
+## Future Enhancements (Not Required Initially)
+- Conversation interface for refining generated content
+- Templates library for quick access to common templates
+- Export functionality directly to Google Slides
