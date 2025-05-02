@@ -81,10 +81,17 @@ export default function GenerateStep() {
       setIsGenerating(true);
       console.log(`Generating content for project ID: ${project.id}`);
       
+      // Make a copy of the project and strategy to preserve them
+      const projectCopy = {...project};
+      const strategyCopy = strategy;
+      
+      console.log("Before generation - Project:", projectCopy);
+      console.log("Before generation - Strategy:", strategyCopy);
+      
       // Use XMLHttpRequest for more direct control and debugging
       return new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open("POST", `/api/projects/${project.id}/generate`, true);
+        xhr.open("POST", `/api/projects/${projectCopy.id}/generate`, true);
         xhr.setRequestHeader("Content-Type", "application/json");
         
         xhr.onload = function() {
@@ -101,7 +108,20 @@ export default function GenerateStep() {
                   description: "No content was returned from the server. Please try again.",
                   variant: "destructive"
                 });
+                setIsGenerating(false);
                 return;
+              }
+              
+              // IMPORTANT: Verify we still have a project and strategy after request
+              // Problem diagnosis: New company creation was resetting the state
+              if (!project || !strategy) {
+                console.error("Project or strategy was reset during content generation");
+                
+                // Re-apply from our preserved copies
+                setProject(projectCopy);
+                setStrategy(strategyCopy);
+                
+                console.log("Re-applied project and strategy from preserved copies");
               }
               
               // Store both the generated content and the original template sections
