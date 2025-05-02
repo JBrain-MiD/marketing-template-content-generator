@@ -2,6 +2,13 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { 
+  Accordion, 
+  AccordionContent, 
+  AccordionItem, 
+  AccordionTrigger 
+} from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge";
 import StepProgress from "@/components/StepProgress";
 import FileUpload from "@/components/FileUpload";
 import UploadedFiles from "@/components/UploadedFiles";
@@ -190,14 +197,70 @@ export default function TemplateStep() {
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-                  {templateAnalysis.sections.map((section: any, index: number) => (
-                    <div key={index} className="bg-gray-50 rounded-md p-3">
-                      <h4 className="text-sm font-medium text-gray-700 mb-1">{section.title}</h4>
-                      <p className="text-xs text-gray-500">Format: {section.format}</p>
-                      <p className="text-xs text-gray-500">Length: {section.expectedLength}</p>
-                    </div>
-                  ))}
+                <div className="p-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-4">Slide-by-Slide Analysis:</h4>
+                  <Accordion type="single" collapsible className="w-full">
+                    {templateAnalysis.sections.map((section: any, index: number) => (
+                      <AccordionItem key={index} value={`slide-${index}`} className="border border-gray-200 rounded-md mb-3 overflow-hidden">
+                        <AccordionTrigger className="px-4 py-3 bg-gray-50 hover:bg-gray-100">
+                          <div className="flex items-center text-left">
+                            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center mr-3 flex-shrink-0">
+                              <span className="text-primary text-sm font-medium">{section.slideNumber || index+1}</span>
+                            </div>
+                            <div className="flex-grow">
+                              <h5 className="text-sm font-medium text-gray-800">{section.title}</h5>
+                              <div className="flex flex-wrap gap-2 mt-1">
+                                <Badge variant="outline" className="text-xs bg-gray-100">
+                                  {section.format}
+                                </Badge>
+                                <Badge variant="outline" className="text-xs bg-gray-100">
+                                  {section.expectedLength}
+                                </Badge>
+                                {section.needsContent !== undefined && (
+                                  <Badge 
+                                    variant={section.needsContent ? "default" : "secondary"} 
+                                    className="text-xs"
+                                  >
+                                    {section.needsContent ? "Needs Content" : "No Content Needed"}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4 py-3 bg-white border-t border-gray-200">
+                          <div className="space-y-2">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <h6 className="text-xs font-semibold text-gray-500 mb-1">Purpose:</h6>
+                                <p className="text-sm text-gray-700">{section.purpose || "Not specified"}</p>
+                              </div>
+                              <div>
+                                <h6 className="text-xs font-semibold text-gray-500 mb-1">Format Details:</h6>
+                                <p className="text-sm text-gray-700">{section.formatDetails || section.format || "Not specified"}</p>
+                              </div>
+                            </div>
+                            
+                            {section.originalText && (
+                              <div className="mt-4">
+                                <h6 className="text-xs font-semibold text-gray-500 mb-1">Original Text:</h6>
+                                <div className="bg-gray-50 p-3 rounded-md text-sm text-gray-700 max-h-32 overflow-y-auto whitespace-pre-wrap">
+                                  {section.originalText}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {section.examples && (
+                              <div className="mt-3">
+                                <h6 className="text-xs font-semibold text-gray-500 mb-1">Examples/Placeholders:</h6>
+                                <p className="text-sm text-gray-700">{section.examples}</p>
+                              </div>
+                            )}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
                 </div>
               </div>
             </CardContent>
