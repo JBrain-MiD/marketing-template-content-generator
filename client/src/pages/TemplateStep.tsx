@@ -23,6 +23,7 @@ export default function TemplateStep() {
   const { setTemplate } = useStore();
   
   const [isUploading, setIsUploading] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadedTemplate, setUploadedTemplate] = useState<File | null>(null);
   const [templateAnalysis, setTemplateAnalysis] = useState<any>(null);
@@ -51,6 +52,7 @@ export default function TemplateStep() {
     // Upload to server
     try {
       setIsUploading(true);
+      setIsAnalyzing(true);
       
       // Create a new FormData instance
       const formData = new FormData();
@@ -97,6 +99,7 @@ export default function TemplateStep() {
             reject(new Error(`Server returned status: ${xhr.status}`));
           }
           setIsUploading(false);
+          setIsAnalyzing(false);
           setUploadProgress(0);
         };
         
@@ -108,6 +111,7 @@ export default function TemplateStep() {
             variant: "destructive"
           });
           setIsUploading(false);
+          setIsAnalyzing(false);
           setUploadProgress(0);
           reject(new Error("Network error"));
         };
@@ -132,6 +136,7 @@ export default function TemplateStep() {
       });
     } finally {
       setIsUploading(false);
+      setIsAnalyzing(false);
       setUploadProgress(0);
     }
   };
@@ -139,6 +144,9 @@ export default function TemplateStep() {
   const removeTemplate = () => {
     setUploadedTemplate(null);
     setTemplateAnalysis(null);
+    setIsUploading(false);
+    setIsAnalyzing(false);
+    setUploadProgress(0);
   };
   
   const goToNextStep = () => {
@@ -183,11 +191,19 @@ export default function TemplateStep() {
                   onRemove={removeTemplate}
                 />
                 
-                {isUploading && (
+                {(isUploading || isAnalyzing) && (
                   <div className="mt-4">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-700">Analyzing template</span>
-                      <span className="text-sm font-medium text-gray-700">{uploadProgress}%</span>
+                      <span className="text-sm font-medium text-gray-700">
+                        {uploadProgress < 100 
+                          ? "Uploading template" 
+                          : "Analyzing template"}
+                      </span>
+                      <span className="text-sm font-medium text-gray-700">
+                        {uploadProgress < 100 
+                          ? `${uploadProgress}%` 
+                          : "Processing..."}
+                      </span>
                     </div>
                     <Progress value={uploadProgress} className="h-2" />
                     <p className="text-xs text-gray-500 mt-2">
@@ -303,7 +319,7 @@ export default function TemplateStep() {
           <Button
             onClick={goToNextStep}
             className="bg-primary hover:bg-primary-dark text-white rounded-md px-6 py-2 text-sm font-medium transition flex items-center"
-            disabled={isUploading}
+            disabled={isUploading || isAnalyzing}
           >
             Next: Company Info
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
