@@ -32,6 +32,12 @@ export default function Home() {
       <div className="text-center mt-6">
         <p>Having issues? Try these direct links:</p>
         <div className="space-x-4 mt-4">
+          <Button variant="outline" onClick={() => navigate("/test")}>
+            Basic Test Page
+          </Button>
+          <Button variant="outline" onClick={() => navigate("/mintest")}>
+            Minimal Test Page
+          </Button>
           <Button variant="outline" onClick={() => navigate("/template")}>
             Template Step
           </Button>
