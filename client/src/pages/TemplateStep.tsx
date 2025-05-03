@@ -9,6 +9,7 @@ import {
   AccordionTrigger 
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import StepProgress from "@/components/StepProgress";
 import FileUpload from "@/components/FileUpload";
 import UploadedFiles from "@/components/UploadedFiles";
@@ -22,6 +23,7 @@ export default function TemplateStep() {
   const { setTemplate } = useStore();
   
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadedTemplate, setUploadedTemplate] = useState<File | null>(null);
   const [templateAnalysis, setTemplateAnalysis] = useState<any>(null);
   
@@ -95,6 +97,7 @@ export default function TemplateStep() {
             reject(new Error(`Server returned status: ${xhr.status}`));
           }
           setIsUploading(false);
+          setUploadProgress(0);
         };
         
         xhr.onerror = function() {
@@ -105,6 +108,7 @@ export default function TemplateStep() {
             variant: "destructive"
           });
           setIsUploading(false);
+          setUploadProgress(0);
           reject(new Error("Network error"));
         };
         
@@ -112,6 +116,7 @@ export default function TemplateStep() {
           if (e.lengthComputable) {
             const percentComplete = Math.round((e.loaded / e.total) * 100);
             console.log(`Upload progress: ${percentComplete}%`);
+            setUploadProgress(percentComplete);
           }
         };
         
@@ -127,6 +132,7 @@ export default function TemplateStep() {
       });
     } finally {
       setIsUploading(false);
+      setUploadProgress(0);
     }
   };
   
@@ -171,10 +177,36 @@ export default function TemplateStep() {
                 helpText="Upload your marketing template PDF (Max 10MB)"
               />
             ) : (
-              <UploadedFiles
-                files={[uploadedTemplate]}
-                onRemove={removeTemplate}
-              />
+              <>
+                <UploadedFiles
+                  files={[uploadedTemplate]}
+                  onRemove={removeTemplate}
+                />
+                
+                {isUploading && (
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700">Analyzing template</span>
+                      <span className="text-sm font-medium text-gray-700">{uploadProgress}%</span>
+                    </div>
+                    <Progress value={uploadProgress} className="h-2" />
+                    <p className="text-xs text-gray-500 mt-2">
+                      {uploadProgress < 100 
+                        ? "Uploading your template..." 
+                        : "Analyzing template structure..."}
+                    </p>
+                    {uploadProgress === 100 && (
+                      <div className="flex items-center mt-3">
+                        <svg className="animate-spin h-4 w-4 text-primary mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span className="text-sm text-primary">This may take a minute...</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
