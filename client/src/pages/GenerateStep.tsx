@@ -429,11 +429,14 @@ export default function GenerateStep() {
 
                       <div className="whitespace-pre-wrap text-gray-700 text-base leading-relaxed bg-gray-50 p-5 rounded-md font-normal max-h-[400px] overflow-y-auto">
                         {section.needsContent === false ? (
-                          <div className="text-gray-500 italic">
-                            <p>This slide doesn't require custom content. It appears to be a title slide, table of contents, or other structural element that should remain as-is in the template.</p>
+                          <div className="text-gray-500 italic border-l-4 border-gray-300 pl-4 py-2">
+                            <p className="font-medium mb-1">No custom content needed</p>
+                            <p>This slide is a structural element in your template (like a title slide or table of contents) and should be kept as-is in the final presentation.</p>
                           </div>
                         ) : (
-                          section.content
+                          <div>
+                            {section.content}
+                          </div>
                         )}
                       </div>
                     </div>

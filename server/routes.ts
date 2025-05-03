@@ -337,27 +337,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Use index+1 as fallback for slideNumber
           const slideNumber = section.slideNumber || index + 1;
           
-          // Log the full section structure for debugging
-          console.log(`Generating content for section: ${section.title}, format: ${section.format || 'unknown'}, slide #: ${slideNumber}`);
+          // Determine explicitly if this slide needs content
+          // Make it a simple boolean - true if it needs content, false if not
+          const needsCustomContent = section.needsContent !== false;
           
-          // Only generate content if the slide needs it
+          // Log the full section structure for debugging
+          console.log(`Generating content for section: ${section.title}, format: ${section.format || 'unknown'}, slide #: ${slideNumber}, needsContent: ${needsCustomContent}`);
+          
+          // Generate content regardless, but will flag it correctly in the result
           const content = await generateContent({
-            section,
+            section: {
+              ...section,
+              // Force needsContent to true to ensure we get real content from the AI
+              needsContent: true
+            },
             company,
             strategy: project.strategy || ""
           });
           
-          // Include all the necessary information in the generated content
-          // Make sure to respect the actual needsContent flag from the section
-          // Use === false to ensure only explicitly false values are treated as not needing content
-          const slideNeedsContent = section.needsContent === false ? false : true;
-          
+          // Add to the result with correct original needsContent value
           generatedContent.push({
             slideNumber: slideNumber,
             slideTitle: section.title,
             content,
             format: section.format || "Text",
-            needsContent: slideNeedsContent
+            needsContent: needsCustomContent
           });
           
           console.log(`Generated content for section ${section.title}`);
