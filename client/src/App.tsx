@@ -11,15 +11,11 @@ import TemplateStep from "@/pages/TemplateStep";
 import CompanyInfoStep from "@/pages/CompanyInfoStep";
 import StrategyStep from "@/pages/StrategyStep";
 import GenerateStep from "@/pages/GenerateStep";
-import BasicTest from "@/pages/BasicTest";
-import MinTest from "@/pages/MinTest";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/test" component={BasicTest} />
-      <Route path="/mintest" component={MinTest} />
       <Route path="/template" component={TemplateStep} />
       <Route path="/company-info" component={CompanyInfoStep} />
       <Route path="/strategy" component={StrategyStep} />

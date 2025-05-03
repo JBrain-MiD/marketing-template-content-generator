@@ -3,7 +3,6 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
 import { randomUUID } from "crypto";
-import path from "path";
 import { analyzeTemplate } from "./pdf";
 import { generateContent } from "./openai";
 import {
@@ -37,16 +36,6 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Test route for basic HTML
-  app.get("/minimal", (req, res) => {
-    res.sendFile(path.resolve(import.meta.dirname, "..", "client", "minimal.html"));
-  });
-  
-  // Static HTML page for testing
-  app.get("/static", (req, res) => {
-    res.sendFile(path.resolve(import.meta.dirname, "..", "client", "index-static.html"));
-  });
-  
   // API Routes
   
   // Template routes
