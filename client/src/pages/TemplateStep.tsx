@@ -84,10 +84,14 @@ export default function TemplateStep() {
                 description: `${result.sections.length} sections detected`
               });
               
-              // Only reset upload state, keep analysis state active
+              // Reset upload state and set analysis as complete
               setIsUploading(false);
               setUploadProgress(100);
-              // Don't reset isAnalyzing here - keep it true to show analysis is complete
+              
+              // Wait for a moment and then reset analysis state to hide the processing indicator
+              setTimeout(() => {
+                setIsAnalyzing(false);
+              }, 2000); // 2 seconds delay
               
               resolve(result);
             } catch (error) {
