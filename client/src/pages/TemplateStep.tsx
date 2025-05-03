@@ -84,9 +84,17 @@ export default function TemplateStep() {
                 description: `${result.sections.length} sections detected`
               });
               
+              // Only reset upload state, keep analysis state active
+              setIsUploading(false);
+              setUploadProgress(100);
+              // Don't reset isAnalyzing here - keep it true to show analysis is complete
+              
               resolve(result);
             } catch (error) {
               console.error("Error parsing response:", error);
+              setIsUploading(false);
+              setIsAnalyzing(false);
+              setUploadProgress(0);
               reject(error);
             }
           } else {
@@ -96,11 +104,11 @@ export default function TemplateStep() {
               description: `Server returned status: ${xhr.status}`,
               variant: "destructive"
             });
+            setIsUploading(false);
+            setIsAnalyzing(false);
+            setUploadProgress(0);
             reject(new Error(`Server returned status: ${xhr.status}`));
           }
-          setIsUploading(false);
-          setIsAnalyzing(false);
-          setUploadProgress(0);
         };
         
         xhr.onerror = function() {
@@ -134,7 +142,8 @@ export default function TemplateStep() {
         description: error instanceof Error ? error.message : "Failed to upload template",
         variant: "destructive"
       });
-    } finally {
+      
+      // Reset states only on error
       setIsUploading(false);
       setIsAnalyzing(false);
       setUploadProgress(0);
@@ -290,7 +299,7 @@ export default function TemplateStep() {
           <Button
             onClick={goToNextStep}
             className="bg-primary hover:bg-primary-dark text-white rounded-md px-6 py-2 text-sm font-medium transition flex items-center"
-            disabled={isUploading || isAnalyzing}
+            disabled={isUploading || (isAnalyzing && !templateAnalysis)}
           >
             Next: Company Info
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
