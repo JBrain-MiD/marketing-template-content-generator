@@ -452,7 +452,7 @@ export default function GenerateStep() {
                   </div>
                   
                   {/* Category filter */}
-                  <div className="flex md:w-2/3 gap-2 overflow-x-auto pb-2 scrollbar-hidden">
+                  <div className="flex md:w-2/3 gap-2 overflow-x-auto pb-2">
                     <Button
                       size="sm"
                       variant={activeCategory === "all" ? "default" : "outline"}
@@ -512,10 +512,10 @@ export default function GenerateStep() {
                             {section.format}
                           </Badge>
                         </div>
-                        <h4 className="font-medium text-gray-800 mb-2 line-clamp-1" title={section.slideTitle}>
+                        <h4 className="font-medium text-gray-800 mb-2 truncate" title={section.slideTitle}>
                           {section.slideTitle}
                         </h4>
-                        <p className="text-gray-600 text-sm line-clamp-3">
+                        <p className="text-gray-600 text-sm overflow-hidden" style={{display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical"}}>
                           {section.needsContent === false ? (
                             <span className="italic text-gray-500">This slide doesn't require custom content.</span>
                           ) : (
